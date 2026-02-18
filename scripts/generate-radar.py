@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """
-generate-radar.py v2 — Transition-focused radar generator.
+generate-radar.py v3 — Transition-focused radar generator.
 
-Reads radar.json, outputs self-contained index.html.
-Formula: CATEGORY_WEIGHT + (demand * 3) + GAP_BONUS
+Produces a self-hosted index.html that fetches radar.json and descriptions.json
+at runtime. No hardcoded blip arrays — radar.json is the single source of truth.
 
 Usage:
     python3 scripts/generate-radar.py
@@ -16,47 +16,34 @@ from datetime import date
 
 ROOT = Path(__file__).parent.parent
 RADAR_JSON = ROOT / "radar.json"
+DESCRIPTIONS_JSON = ROOT / "descriptions.json"
 INDEX_HTML = ROOT / "index.html"
 HISTORY_DIR = ROOT / "history"
 
 CATEGORY_WEIGHTS = {"ai_core": 10, "bridge": 8, "enabler": 4, "legacy": 1, "irrelevant": 0}
 GAP_BONUS = {"LEARNING": 5, "NO": 2, "YES": 0}
 RING_ORDER = ["trial", "adopt", "assess", "hold"]
-RING_LABELS = {
-    "trial": "INVEST HERE",
-    "adopt": "MARKET THIS",
-    "assess": "WATCH",
-    "hold": "IGNORE"
-}
-CATEGORY_COLORS = {
-    "ai_core": "#58a6ff",      # blue
-    "bridge": "#bc8cff",       # purple
-    "enabler": "#3fb950",      # green
-    "legacy": "#f0883e",       # orange
-    "irrelevant": "#6e7681"    # gray
-}
 
 
 def compute_score(blip: dict) -> int:
-    """Compute transition score: CATEGORY_WEIGHT + (demand * 3) + GAP_BONUS"""
-    cat_weight = CATEGORY_WEIGHTS.get(blip.get("category", "irrelevant"), 0)
-    demand_score = blip.get("demand", 0) * 3
+    """Transition score = CATEGORY_WEIGHT + (demand * 3) + GAP_BONUS"""
+    cat = CATEGORY_WEIGHTS.get(blip.get("category", "irrelevant"), 0)
+    demand = blip.get("demand", 0) * 3
     gap = GAP_BONUS.get(blip.get("gap", "YES"), 0)
-    return cat_weight + demand_score + gap
+    return cat + demand + gap
 
 
 def load_and_validate(path: Path) -> dict:
     with open(path) as f:
         data = json.load(f)
-
-    # Validate and recompute scores
+    fixed = 0
     for blip in data["blips"]:
         computed = compute_score(blip)
-        stored = blip.get("transition_score", 0)
-        if computed != stored:
-            print(f"  SCORE MISMATCH: {blip['name']} stored={stored} computed={computed} — updating")
+        if computed != blip.get("transition_score", -1):
             blip["transition_score"] = computed
-
+            fixed += 1
+    if fixed:
+        print(f"  Auto-corrected {fixed} transition_score values")
     return data
 
 
@@ -69,42 +56,12 @@ def save_history(radar: dict):
     print(f"  Snapshot → {path}")
 
 
-def focus_board_html(blips: list) -> str:
-    """Top 5 Trial items by transition score."""
-    trial_blips = [b for b in blips if b["ring"] == "trial"]
-    top5 = sorted(trial_blips, key=lambda b: b["transition_score"], reverse=True)[:5]
-    max_score = top5[0]["transition_score"] if top5 else 1
-
-    items = ""
-    for i, b in enumerate(top5, 1):
-        pct = int((b["transition_score"] / max_score) * 100)
-        cat_color = CATEGORY_COLORS.get(b.get("category", "irrelevant"), "#6e7681")
-        gap_badge = f'<span class="gap-badge gap-{b.get("gap","YES").lower()}">{b.get("gap","YES")}</span>'
-        items += f"""
-        <div class="focus-item">
-          <div class="focus-rank">#{i}</div>
-          <div class="focus-body">
-            <div class="focus-name">
-              <span style="color:{cat_color}">●</span> {b['name']} {gap_badge}
-            </div>
-            <div class="focus-bar-wrap">
-              <div class="focus-bar" style="width:{pct}%"></div>
-              <span class="focus-score">{b['transition_score']}</span>
-            </div>
-            <div class="focus-meta">{b.get('demand',0)} job signal{'s' if b.get('demand',0)!=1 else ''} · {b.get('description','')[:80]}...</div>
-          </div>
-        </div>"""
-    return items
-
-
 def generate_html(radar: dict) -> str:
-    blips = radar["blips"]
-    radar_json = json.dumps(radar, indent=2)
-
-    # Stats
-    by_ring = {r: [b for b in blips if b["ring"] == r] for r in RING_ORDER}
-
-    focus_items = focus_board_html(blips)
+    """Generate an index.html that fetches radar.json at runtime."""
+    version = radar.get("version", "2.0")
+    radar_date = radar.get("date", str(date.today()))
+    total = len(radar["blips"])
+    by_ring = {r: len([b for b in radar["blips"] if b["ring"] == r]) for r in RING_ORDER}
 
     return f"""<!DOCTYPE html>
 <html lang="en">
@@ -115,172 +72,239 @@ def generate_html(radar: dict) -> str:
 <style>
 *{{box-sizing:border-box;margin:0;padding:0}}
 body{{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#0d1117;color:#e6edf3;min-height:100vh}}
-a{{color:#58a6ff;text-decoration:none}}
 
-/* Header */
-header{{padding:20px 28px;border-bottom:1px solid #21262d;display:flex;justify-content:space-between;align-items:center}}
+header{{padding:20px 28px;border-bottom:1px solid #21262d;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px}}
 .header-title{{font-size:18px;font-weight:700}}
 .header-sub{{font-size:12px;color:#8b949e;margin-top:3px}}
 .header-meta{{font-size:12px;color:#8b949e;text-align:right}}
 
-/* Focus Board */
 .focus-board{{margin:20px 28px;background:#161b22;border:1px solid #21262d;border-radius:8px;overflow:hidden}}
-.focus-board-header{{padding:12px 16px;background:#1c2128;border-bottom:1px solid #21262d;font-size:13px;font-weight:600;color:#58a6ff;letter-spacing:0.04em}}
+.focus-board-header{{padding:12px 16px;background:#1c2128;border-bottom:1px solid #21262d;font-size:13px;font-weight:600;color:#58a6ff;letter-spacing:.04em}}
 .focus-item{{display:flex;gap:12px;padding:12px 16px;border-bottom:1px solid #21262d}}
 .focus-item:last-child{{border-bottom:none}}
-.focus-rank{{font-size:16px;font-weight:700;color:#484f58;width:24px;flex-shrink:0;padding-top:1px}}
+.focus-rank{{font-size:16px;font-weight:700;color:#484f58;width:24px;flex-shrink:0;padding-top:2px}}
 .focus-body{{flex:1;min-width:0}}
-.focus-name{{font-size:13px;font-weight:600;margin-bottom:6px;display:flex;align-items:center;gap:6px}}
+.focus-name{{font-size:13px;font-weight:600;margin-bottom:6px}}
 .focus-bar-wrap{{display:flex;align-items:center;gap:8px;margin-bottom:4px}}
-.focus-bar{{height:6px;background:#58a6ff;border-radius:3px;transition:width 0.3s}}
+.focus-bar{{height:6px;background:#58a6ff;border-radius:3px}}
 .focus-score{{font-size:12px;font-weight:700;color:#58a6ff;min-width:28px}}
 .focus-meta{{font-size:11px;color:#8b949e;line-height:1.4}}
 
-/* Gap badges */
-.gap-badge{{font-size:10px;padding:1px 6px;border-radius:10px;font-weight:600}}
-.gap-learning{{background:rgba(88,166,255,0.15);color:#58a6ff;border:1px solid rgba(88,166,255,0.3)}}
-.gap-no{{background:rgba(248,81,73,0.1);color:#f85149;border:1px solid rgba(248,81,73,0.3)}}
-.gap-yes{{background:rgba(63,185,80,0.1);color:#3fb950;border:1px solid rgba(63,185,80,0.3)}}
+.gap-badge{{font-size:10px;padding:1px 6px;border-radius:10px;font-weight:600;margin-left:4px}}
+.gap-learning{{background:rgba(88,166,255,.15);color:#58a6ff;border:1px solid rgba(88,166,255,.3)}}
+.gap-no{{background:rgba(248,81,73,.1);color:#f85149;border:1px solid rgba(248,81,73,.3)}}
+.gap-yes{{background:rgba(63,185,80,.1);color:#3fb950;border:1px solid rgba(63,185,80,.3)}}
 
-/* Filters */
-.filters{{padding:12px 28px;display:flex;gap:8px;flex-wrap:wrap;border-bottom:1px solid #21262d}}
-.filter-btn{{padding:5px 12px;border-radius:20px;border:1px solid #30363d;background:#161b22;color:#8b949e;cursor:pointer;font-size:12px;transition:all 0.15s}}
-.filter-btn:hover,.filter-btn.active{{border-color:#58a6ff;color:#58a6ff;background:rgba(88,166,255,0.1)}}
+.filters{{padding:12px 28px;display:flex;gap:8px;flex-wrap:wrap;border-bottom:1px solid #21262d;align-items:center}}
+.filter-label{{font-size:12px;color:#8b949e;margin-right:4px}}
+.filter-btn{{padding:5px 12px;border-radius:20px;border:1px solid #30363d;background:#161b22;color:#8b949e;cursor:pointer;font-size:12px;transition:all .15s}}
+.filter-btn:hover,.filter-btn.active{{border-color:#58a6ff;color:#58a6ff;background:rgba(88,166,255,.1)}}
 
-/* Category legend */
-.legend{{padding:8px 28px;display:flex;gap:16px;border-bottom:1px solid #21262d;font-size:11px;color:#8b949e}}
-.legend-item{{display:flex;align-items:center;gap:4px}}
+.legend{{padding:8px 28px;display:flex;gap:16px;flex-wrap:wrap;border-bottom:1px solid #21262d;font-size:11px;color:#8b949e;align-items:center}}
 
-/* Radar grid */
 .radar-grid{{padding:20px 28px;display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:16px}}
 
-/* Ring sections */
 .ring-section{{background:#161b22;border:1px solid #21262d;border-radius:8px;overflow:hidden}}
-.ring-header{{padding:12px 14px;border-bottom:1px solid #21262d;display:flex;justify-content:space-between;align-items:center;cursor:pointer;user-select:none}}
-.ring-name{{font-size:13px;font-weight:700;letter-spacing:0.05em}}
-.ring-meaning{{font-size:11px;color:#8b949e}}
+.ring-header{{padding:12px 14px;border-bottom:1px solid #21262d;display:flex;justify-content:space-between;align-items:center}}
+.ring-name{{font-size:13px;font-weight:700;letter-spacing:.05em}}
+.ring-meaning{{font-size:11px;color:#8b949e;margin-left:8px}}
 .ring-count{{font-size:11px;color:#8b949e;background:#21262d;padding:2px 8px;border-radius:10px}}
 
-/* Blips */
-.blip{{padding:9px 14px;border-bottom:1px solid #1c2128;cursor:pointer;transition:background 0.1s}}
+.blip{{padding:9px 14px;border-bottom:1px solid #1c2128;cursor:pointer;transition:background .1s}}
 .blip:last-child{{border-bottom:none}}
 .blip:hover{{background:#1c2128}}
 .blip-row{{display:flex;align-items:center;gap:8px}}
 .blip-indicator{{width:10px;height:10px;border-radius:50%;flex-shrink:0}}
-.blip-indicator.new{{border-radius:0;width:0;height:0;background:transparent !important;border-left:5px solid transparent;border-right:5px solid transparent;border-bottom:10px solid currentColor}}
+.blip-indicator.new-blip{{border-radius:0;width:0;height:0;background:transparent!important;border-left:5px solid transparent;border-right:5px solid transparent;border-bottom:10px solid var(--cat-color)}}
 .blip-name{{font-size:13px;font-weight:500;flex:1}}
 .blip-score{{font-size:11px;font-weight:700;color:#8b949e}}
-.blip-signals{{font-size:10px;color:#6e7681;margin-left:18px;margin-top:2px}}
-.blip-desc{{display:none;font-size:12px;color:#8b949e;margin-top:6px;margin-left:18px;line-height:1.5;padding-bottom:2px}}
-.blip.open .blip-desc{{display:block}}
+.blip-signals{{font-size:10px;color:#6e7681;margin:2px 0 0 18px}}
+.blip-desc{{display:none;font-size:12px;color:#8b949e;margin:6px 0 2px 18px;line-height:1.5}}
 .blip-jobs{{font-size:11px;color:#3fb950;margin-top:4px}}
+.blip-resources{{font-size:11px;color:#58a6ff;margin-top:4px}}
+.blip.open .blip-desc{{display:block}}
+.new-badge{{font-size:10px;padding:1px 5px;border-radius:6px;background:rgba(88,166,255,.15);color:#58a6ff;border:1px solid rgba(88,166,255,.3);margin-left:4px}}
 
-/* Hold section collapsed */
 .hold-body{{display:none}}
 .hold-body.visible{{display:block}}
-.expand-hint{{font-size:11px;color:#6e7681;padding:8px 14px;text-align:center;cursor:pointer}}
-.expand-hint:hover{{color:#8b949e}}
+.hold-toggle{{font-size:11px;color:#6e7681;padding:8px 14px;text-align:center;cursor:pointer;border-top:none}}
+.hold-toggle:hover{{color:#8b949e}}
 
-/* Stats bar */
-.stats{{padding:12px 28px;border-top:1px solid #21262d;display:flex;gap:20px;font-size:12px;color:#8b949e}}
+.stats{{padding:12px 28px;border-top:1px solid #21262d;display:flex;gap:20px;flex-wrap:wrap;font-size:12px;color:#8b949e}}
 .stat-val{{font-weight:700;color:#e6edf3}}
+.stat-formula{{margin-left:auto;color:#6e7681;font-size:11px}}
+
+.loading{{padding:40px;text-align:center;color:#8b949e}}
+.error{{padding:20px 28px;color:#f85149;background:rgba(248,81,73,.05);border:1px solid rgba(248,81,73,.3);margin:20px 28px;border-radius:8px}}
 </style>
 </head>
 <body>
 
 <header>
   <div>
-    <div class="header-title">⚡ Transition Radar v2</div>
+    <div class="header-title">⚡ Transition Radar v{version}</div>
     <div class="header-sub">Where should 15 hrs/week go to land a senior AI/ML role?</div>
   </div>
   <div class="header-meta">
-    {radar.get('date','2026-02-18')} · {len(blips)} technologies<br>
-    <span style="color:#6e7681">Jerzy Plocha · AI/ML Engineering</span>
+    {radar_date} · {total} technologies<br>
+    <span style="color:#6e7681">Jerzy Plocha · AI/ML Engineering Transition</span>
   </div>
 </header>
 
-<div class="focus-board">
+<div id="focus-board" class="focus-board" style="display:none">
   <div class="focus-board-header">🎯 FOCUS BOARD — Top 5 Investment Priorities (Trial ring)</div>
-  {focus_items}
+  <div id="focus-items"></div>
 </div>
 
 <div class="filters">
-  <span style="font-size:12px;color:#8b949e;margin-right:4px">Quadrant:</span>
+  <span class="filter-label">Quadrant:</span>
   <button class="filter-btn active" data-q="all">All</button>
   <button class="filter-btn" data-q="techniques">Techniques</button>
   <button class="filter-btn" data-q="platforms">Platforms</button>
   <button class="filter-btn" data-q="languages-frameworks">Languages</button>
+  <button class="filter-btn" data-q="tools">Tools</button>
 </div>
 
 <div class="legend">
-  <span style="color:#6e7681;margin-right:4px">Category:</span>
-  <div class="legend-item"><span style="color:#58a6ff">●</span> AI Core</div>
-  <div class="legend-item"><span style="color:#bc8cff">●</span> Bridge</div>
-  <div class="legend-item"><span style="color:#3fb950">●</span> Enabler</div>
-  <div class="legend-item"><span style="color:#f0883e">●</span> Legacy</div>
-  <div class="legend-item"><span style="color:#6e7681">●</span> Irrelevant</div>
-  <span style="color:#6e7681;margin-left:12px">▲ = new this scan</span>
+  <span style="color:#6e7681;margin-right:2px">Category:</span>
+  <span><span style="color:#58a6ff">●</span> AI Core (10)</span>
+  <span><span style="color:#bc8cff">●</span> Bridge (8)</span>
+  <span><span style="color:#3fb950">●</span> Enabler (4)</span>
+  <span><span style="color:#f0883e">●</span> Legacy (1)</span>
+  <span><span style="color:#6e7681">●</span> Irrelevant (0)</span>
+  <span style="margin-left:8px;color:#6e7681">▲ = new this scan · click blip to expand</span>
 </div>
 
-<div class="radar-grid" id="radar-grid"></div>
-
-<div class="stats" id="stats"></div>
+<div id="radar-grid" class="radar-grid"><div class="loading">Loading radar data…</div></div>
+<div id="stats" class="stats"></div>
 
 <script>
-const RADAR = {radar_json};
-const RING_COLORS = {{trial:'#58a6ff',adopt:'#3fb950',assess:'#f0ad4e',hold:'#6e7681'}};
-const RING_LABELS = {{trial:'INVEST HERE',adopt:'MARKET THIS',assess:'WATCH',hold:'IGNORE'}};
-const CAT_COLORS = {{ai_core:'#58a6ff',bridge:'#bc8cff',enabler:'#3fb950',legacy:'#f0883e',irrelevant:'#6e7681'}};
-const RINGS = ['trial','adopt','assess','hold'];
+const RING_COLORS  = {{trial:'#58a6ff',adopt:'#3fb950',assess:'#f0ad4e',hold:'#6e7681'}};
+const RING_LABELS  = {{trial:'INVEST HERE',adopt:'MARKET THIS',assess:'WATCH',hold:'IGNORE'}};
+const CAT_COLORS   = {{ai_core:'#58a6ff',bridge:'#bc8cff',enabler:'#3fb950',legacy:'#f0883e',irrelevant:'#6e7681'}};
+const RINGS        = ['trial','adopt','assess','hold'];
 
+let RADAR = null;
+let DESCS = {{}};
 let activeQ = 'all';
 
-function renderGrid() {{
+async function loadData() {{
+  try {{
+    const [radarRes, descRes] = await Promise.all([
+      fetch('radar.json'),
+      fetch('descriptions.json').catch(() => ({{ok:false}}))
+    ]);
+    if (!radarRes.ok) throw new Error('Failed to load radar.json');
+    RADAR = await radarRes.json();
+    if (descRes.ok) {{
+      const d = await descRes.json();
+      DESCS = d.skills || {{}};
+    }}
+    render();
+  }} catch(e) {{
+    document.getElementById('radar-grid').innerHTML =
+      `<div class="error">⚠️ Error loading radar data: ${{e.message}}<br>
+       When running locally, serve with: <code>python3 -m http.server 8080</code></div>`;
+  }}
+}}
+
+function catColor(cat) {{
+  return CAT_COLORS[cat] || '#6e7681';
+}}
+
+function renderFocusBoard(blips) {{
+  const trial = blips
+    .filter(b => b.ring === 'trial')
+    .sort((a,b) => b.transition_score - a.transition_score)
+    .slice(0,5);
+  if (!trial.length) return;
+  const maxScore = trial[0].transition_score || 1;
+  const board = document.getElementById('focus-board');
+  const items = document.getElementById('focus-items');
+  board.style.display = '';
+  items.innerHTML = trial.map((b,i) => {{
+    const pct = Math.round((b.transition_score / maxScore) * 100);
+    const cc  = catColor(b.category);
+    const gap = (b.gap||'YES').toLowerCase();
+    const desc = DESCS[b.name];
+    const metaText = desc
+      ? desc.description.slice(0,90) + '…'
+      : (b.description||'').slice(0,90) + '…';
+    return `<div class="focus-item">
+      <div class="focus-rank">#${{i+1}}</div>
+      <div class="focus-body">
+        <div class="focus-name">
+          <span style="color:${{cc}}">●</span> ${{b.name}}
+          <span class="gap-badge gap-${{gap}}">${{b.gap||'YES'}}</span>
+        </div>
+        <div class="focus-bar-wrap">
+          <div class="focus-bar" style="width:${{pct}}%"></div>
+          <span class="focus-score">${{b.transition_score}}</span>
+        </div>
+        <div class="focus-meta">${{b.demand}} job signal${{b.demand!==1?'s':''}} · ${{metaText}}</div>
+      </div>
+    </div>`;
+  }}).join('');
+}}
+
+function renderGrid(blips) {{
   const grid = document.getElementById('radar-grid');
   grid.innerHTML = '';
 
   RINGS.forEach(ring => {{
-    let blips = RADAR.blips.filter(b => b.ring === ring);
-    if (activeQ !== 'all') blips = blips.filter(b => b.quadrant === activeQ);
-    if (!blips.length) return;
+    let ringBlips = blips.filter(b => b.ring === ring);
+    if (activeQ !== 'all') ringBlips = ringBlips.filter(b => b.quadrant === activeQ);
+    if (!ringBlips.length) return;
 
-    blips.sort((a,b) => b.transition_score - a.transition_score);
+    ringBlips.sort((a,b) => b.transition_score - a.transition_score);
 
     const sec = document.createElement('div');
     sec.className = 'ring-section';
+    const rc = RING_COLORS[ring];
 
-    const rColor = RING_COLORS[ring];
-    sec.innerHTML = `<div class="ring-header" data-ring="${{ring}}">
+    const header = document.createElement('div');
+    header.className = 'ring-header';
+    header.innerHTML = `
       <div>
-        <span class="ring-name" style="color:${{rColor}}">${{ring.toUpperCase()}}</span>
-        <span class="ring-meaning" style="margin-left:8px">— ${{RING_LABELS[ring]}}</span>
+        <span class="ring-name" style="color:${{rc}}">${{ring.toUpperCase()}}</span>
+        <span class="ring-meaning">— ${{RING_LABELS[ring]}}</span>
       </div>
-      <span class="ring-count">${{blips.length}}</span>
-    </div>`;
+      <span class="ring-count">${{ringBlips.length}}</span>`;
+    sec.appendChild(header);
 
     const body = document.createElement('div');
     body.className = ring === 'hold' ? 'hold-body' : 'ring-body';
 
-    blips.forEach(blip => {{
-      const catColor = CAT_COLORS[blip.category] || '#6e7681';
-      const indClass = blip.isNew ? 'blip-indicator new' : 'blip-indicator';
-      const indStyle = blip.isNew ? `color:${{catColor}}` : `background:${{catColor}}`;
-      const gapCls = `gap-badge gap-${{(blip.gap||'YES').toLowerCase()}}`;
-      const jobs = blip.job_examples?.length
-        ? `<div class="blip-jobs">Seen in: ${{blip.job_examples.slice(0,2).join(', ')}}</div>` : '';
+    ringBlips.forEach(blip => {{
+      const cc  = catColor(blip.category);
+      const gap = (blip.gap||'YES').toLowerCase();
+      const desc  = DESCS[blip.name];
+      const descText  = desc?.description || blip.description || '';
+      const jobs = (desc?.job_examples || blip.job_examples || []).slice(0,3);
+      const resources = (desc?.resources || []).slice(0,2);
 
       const el = document.createElement('div');
       el.className = 'blip';
+      el.style.setProperty('--cat-color', cc);
+
+      const indHtml = blip.isNew
+        ? `<div class="blip-indicator new-blip"></div>`
+        : `<div class="blip-indicator" style="background:${{cc}}"></div>`;
+
       el.innerHTML = `
         <div class="blip-row">
-          <div class="${{indClass}}" style="${{indStyle}}"></div>
-          <span class="blip-name">${{blip.name}}</span>
-          ${{blip.isNew ? '<span style="font-size:10px;color:#58a6ff">NEW</span>' : ''}}
+          ${{indHtml}}
+          <span class="blip-name">${{blip.name}}${{blip.isNew?'<span class="new-badge">NEW</span>':''}}</span>
           <span class="blip-score">${{blip.transition_score}}</span>
-          <span class="${{gapCls}}">${{blip.gap||'YES'}}</span>
+          <span class="gap-badge gap-${{gap}}">${{blip.gap||'YES'}}</span>
         </div>
         ${{blip.demand ? `<div class="blip-signals">${{blip.demand}} job signal${{blip.demand!==1?'s':''}}</div>` : ''}}
-        <div class="blip-desc">${{blip.description}}${{jobs}}</div>`;
+        <div class="blip-desc">
+          ${{descText}}
+          ${{jobs.length ? `<div class="blip-jobs">📋 ${{jobs.join(' · ')}}</div>` : ''}}
+          ${{resources.length ? `<div class="blip-resources">→ ${{resources.join(' · ')}}</div>` : ''}}
+        </div>`;
+
       el.addEventListener('click', () => el.classList.toggle('open'));
       body.appendChild(el);
     }});
@@ -288,43 +312,51 @@ function renderGrid() {{
     sec.appendChild(body);
 
     if (ring === 'hold') {{
-      const hint = document.createElement('div');
-      hint.className = 'expand-hint';
-      hint.textContent = `▼ Show ${{blips.length}} deprioritised skills`;
-      hint.addEventListener('click', () => {{
+      const toggle = document.createElement('div');
+      toggle.className = 'hold-toggle';
+      toggle.textContent = `▼ Show ${{ringBlips.length}} deprioritised skills`;
+      toggle.addEventListener('click', () => {{
         body.classList.toggle('visible');
-        hint.textContent = body.classList.contains('visible')
-          ? '▲ Hide hold ring' : `▼ Show ${{blips.length}} deprioritised skills`;
+        toggle.textContent = body.classList.contains('visible')
+          ? '▲ Hide hold ring'
+          : `▼ Show ${{ringBlips.length}} deprioritised skills`;
       }});
-      sec.appendChild(hint);
+      sec.appendChild(toggle);
     }}
-
-    sec.querySelector('.ring-header').addEventListener('click', (e) => {{
-      if (ring !== 'hold') body.style.display = body.style.display === 'none' ? '' : '';
-    }});
 
     grid.appendChild(sec);
   }});
+}}
 
-  // Stats
+function renderStats(blips) {{
   const stats = document.getElementById('stats');
-  const counts = RINGS.map(r => {{
-    const n = RADAR.blips.filter(b=>b.ring===r && (activeQ==='all'||b.quadrant===activeQ)).length;
+  const filtered = activeQ === 'all' ? blips : blips.filter(b => b.quadrant === activeQ);
+  const parts = RINGS.map(r => {{
+    const n = filtered.filter(b => b.ring === r).length;
     return `<div><span class="stat-val">${{n}}</span> ${{r}}</div>`;
   }});
-  stats.innerHTML = counts.join('') + `<div style="margin-left:auto;color:#6e7681">Score = CATEGORY_WEIGHT + (demand×3) + GAP_BONUS</div>`;
+  parts.push(`<div class="stat-formula">score = CATEGORY_WEIGHT + (demand×3) + GAP_BONUS</div>`);
+  stats.innerHTML = parts.join('');
+}}
+
+function render() {{
+  if (!RADAR) return;
+  const blips = RADAR.blips;
+  renderFocusBoard(blips);
+  renderGrid(blips);
+  renderStats(blips);
 }}
 
 document.querySelectorAll('.filter-btn[data-q]').forEach(btn => {{
   btn.addEventListener('click', () => {{
     activeQ = btn.dataset.q;
-    document.querySelectorAll('[data-q]').forEach(b=>b.classList.remove('active'));
+    document.querySelectorAll('[data-q]').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
-    renderGrid();
+    render();
   }});
 }});
 
-renderGrid();
+loadData();
 </script>
 </body>
 </html>"""
@@ -336,21 +368,25 @@ def main():
 
     blips = radar["blips"]
     by_ring = {r: [b for b in blips if b["ring"] == r] for r in RING_ORDER}
-    print(f"  Blips: {len(blips)} total — " + " | ".join(f"{r}: {len(by_ring[r])}" for r in RING_ORDER))
+    print(f"  {len(blips)} blips — " + " | ".join(f"{r}: {len(by_ring[r])}" for r in RING_ORDER))
 
-    print(f"Generating {INDEX_HTML}...")
+    # Save corrected scores back to radar.json
+    with open(RADAR_JSON, "w") as f:
+        json.dump(radar, f, indent=2)
+
+    print(f"Generating {INDEX_HTML} (fetch-based)...")
     html = generate_html(radar)
     with open(INDEX_HTML, "w") as f:
         f.write(html)
 
     save_history(radar)
 
-    top5 = sorted([b for b in blips if b["ring"] == "trial"], key=lambda b: b["transition_score"], reverse=True)[:5]
+    top5 = sorted(by_ring["trial"], key=lambda b: b["transition_score"], reverse=True)[:5]
     print("\nFocus Board:")
     for i, b in enumerate(top5, 1):
-        print(f"  #{i} {b['name']:35s} score={b['transition_score']} demand={b['demand']} gap={b['gap']}")
+        print(f"  #{i} {b['name']:40s} score={b['transition_score']} demand={b['demand']} gap={b['gap']}")
 
-    print("\nDone.")
+    print("\nDone. Serve locally: python3 -m http.server 8080")
 
 
 if __name__ == "__main__":

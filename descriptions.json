@@ -1,0 +1,195 @@
+{
+  "_note": "Display-only overlay for tech-radar. radar.json is authoritative for ring/category/score/demand. This file adds rich descriptions and job_examples. Merged at render time by index.html.",
+  "skills": {
+    "RAG Pipeline": {
+      "description": "Top priority. Portfolio project shipped (ml-portfolio). FAISS + sentence-transformers + multi-LLM. 7 job appearances. Direct interview proof — show the GitHub link.",
+      "job_examples": ["ML Platform Engineer", "AI Engineer (GenAI, LLMs)", "Senior ML Engineer - LLM & Voice"],
+      "resources": ["ml-portfolio repo (github.com/kevin-bot-openclaw-ops/ml-portfolio)", "Andrew Ng RAG module", "Springer Nature book chapters"]
+    },
+    "AI Model Evaluation / RLHF": {
+      "description": "Evaluation frameworks, benchmark design, human feedback loops. Gap: no production experience yet. High ROI to learn — differentiates ML engineers from 'prompt wrappers'.",
+      "job_examples": ["ML Platform Engineer", "Head of Machine Learning"],
+      "resources": ["HELM benchmark", "lm-evaluation-harness", "Anthropic Constitutional AI paper"]
+    },
+    "Agentic AI Systems": {
+      "description": "LLM agents with tool use, planning, multi-step reasoning. Reviewed in Springer Nature book. Fast-moving — first movers get outsized credit.",
+      "job_examples": ["Senior AI Engineer", "AI Engineer (GenAI, LLMs & Computer Vision)"],
+      "resources": ["Springer book agentic workflows chapter", "LangGraph docs", "AutoGen"]
+    },
+    "LLM Prompt Engineering": {
+      "description": "Context design, RAG prompt templates, few-shot, chain-of-thought patterns. Already applied in ml-portfolio — formalise and market this skill explicitly.",
+      "job_examples": ["AI Engineer", "Senior ML Engineer"],
+      "resources": ["Anthropic prompt engineering guide", "OpenAI cookbook"]
+    },
+    "LLM Inference Infrastructure": {
+      "description": "vLLM, TGI, Ollama at scale. Production model serving and batching. Strong infra angle — closest to your 15-year backend expertise. Gap but high ROI.",
+      "job_examples": ["ML Platform Engineer", "MLOps Engineer"],
+      "resources": ["vLLM docs", "HuggingFace TGI", "Ollama (already used in portfolio)"]
+    },
+    "Vector Databases": {
+      "description": "FAISS used in RAG portfolio. Pinecone, ChromaDB for production. RAG dependency — you're already partially here. Deepen on managed options.",
+      "job_examples": ["Senior ML Engineer - LLM & Voice", "AI Engineer"],
+      "resources": ["FAISS (used)", "Pinecone quickstart", "ChromaDB docs"]
+    },
+    "MLOps": {
+      "description": "ML CI/CD, model versioning, drift monitoring, reproducibility. Bridges your backend engineering discipline to ML systems. Closest to what you already do.",
+      "job_examples": ["MLOps Engineer (GenAI / Databricks)", "Senior MLOps Engineer"],
+      "resources": ["MLflow (start here)", "DVC", "Weights & Biases"]
+    },
+    "NLP Embeddings": {
+      "description": "sentence-transformers in use in RAG project. Semantic search, chunking strategies, embedding model selection. Deepen understanding from portfolio work.",
+      "job_examples": ["Senior ML Engineer - LLM & Voice"],
+      "resources": ["sentence-transformers docs", "MTEB leaderboard", "Andrew Ng NLP specialisation"]
+    },
+    "LLM Fine-tuning / LoRA": {
+      "description": "LoRA, QLoRA, parameter-efficient fine-tuning. Declined NLP fine-tuning contract (good call — too early). Build understanding now so you can evaluate scope correctly next time.",
+      "job_examples": ["ML Engineer (LLMs, NLP)"],
+      "resources": ["Hugging Face PEFT library", "QLoRA paper", "Unsloth (fast fine-tuning)"]
+    },
+    "LLM Integration Patterns": {
+      "description": "Enterprise LLM deployment patterns beyond basic RAG: function calling, structured outputs, multi-modal, streaming. Watch as the field matures past RAG hype.",
+      "job_examples": ["Senior AI Engineer", "AI Platform Engineer"],
+      "resources": ["OpenAI function calling docs", "Instructor library (structured outputs)", "LiteLLM"]
+    },
+    "MCP (Model Context Protocol)": {
+      "description": "Anthropic standard for AI tool integration. 1 appearance but strategic override: early-mover advantage. Few engineers have hands-on MCP experience yet.",
+      "job_examples": [],
+      "resources": ["Anthropic MCP spec", "MCP server examples", "OpenClaw uses MCP internally"]
+    },
+    "Azure": {
+      "description": "5 appearances — highest cloud demand signal in EU AI/ML. AWS certified but Azure more prevalent in EU job market. Lead with Azure in applications targeting EU roles.",
+      "job_examples": ["ML Engineer at RED Global", "Multiple EU AI/ML roles"],
+      "resources": ["Azure ML Studio", "Azure OpenAI Service", "Azure Cognitive Services"]
+    },
+    "Python": {
+      "description": "3 appearances. FastAPI, pandas, numpy, sentence-transformers in active use across portfolio projects. Don't undersell — market explicitly.",
+      "job_examples": ["Senior ML Engineer", "AI Engineer"],
+      "resources": ["Portfolio projects (ml-portfolio, job-search-tracker)"]
+    },
+    "LLM APIs": {
+      "description": "Anthropic, OpenAI, Ollama used in ml-portfolio. You can deploy LLM integrations today. Market this actively — it's already a YES skill.",
+      "job_examples": ["AI Engineer", "Senior ML Engineer"],
+      "resources": ["ml-portfolio repo demonstrates this"]
+    },
+    "AWS": {
+      "description": "Solutions Architect certified (Apr 2024). EC2, Lambda, S3, SageMaker basics. Strong positioning for cloud-native AI infra roles.",
+      "job_examples": ["Backend Engineer + AI", "MLOps Engineer"],
+      "resources": ["AWS SAA certification (2024)", "SageMaker for ML deployment"]
+    },
+    "Kubernetes": {
+      "description": "Credit Suisse deployment experience. Container orchestration for ML model serving at scale. Market for MLOps and ML platform roles.",
+      "job_examples": ["MLOps Engineer", "ML Platform Engineer"],
+      "resources": ["k8s experience from Credit Suisse"]
+    },
+    "Banking Domain": {
+      "description": "Citi, Deutsche Bank, Santander, Credit Suisse. Unique differentiator — most ML engineers lack financial domain expertise. Finance AI roles need both.",
+      "job_examples": ["AI Engineer - Financial Services", "Senior Backend + ML"],
+      "resources": ["15 years experience across tier-1 banks"]
+    },
+    "Solution Architecture": {
+      "description": "15 years enterprise design experience. System design interviews, architecture docs, trade-off analysis. Market as production engineering discipline.",
+      "job_examples": ["Principal Engineer", "Staff ML Engineer"],
+      "resources": ["AWS SAA, enterprise patterns experience"]
+    },
+    "Spring AI": {
+      "description": "Springer Nature technical review — you reviewed production code using this. Java-native LLM integration. Niche differentiator for Java shops adopting AI.",
+      "job_examples": ["Senior Java Engineer - AI Modernisation"],
+      "resources": ["Springer Nature book (reviewed)", "Spring AI official docs"]
+    },
+    "Chatbot Integration": {
+      "description": "LLM-powered conversational AI deployment patterns. Enterprise chatbot architecture. Market alongside RAG portfolio.",
+      "job_examples": ["AI Engineer"],
+      "resources": ["RAG portfolio demonstrates chatbot patterns"]
+    },
+    "FastAPI": {
+      "description": "Python REST API framework for ML model serving. Used across portfolio projects. Standard tool in ML engineering stack.",
+      "job_examples": ["AI Engineer", "MLOps Engineer"],
+      "resources": ["Used in ml-portfolio, job-search-tracker"]
+    },
+    "REST API Design": {
+      "description": "API design and implementation. Foundational across all engineering roles. Don't lead with it — it's table stakes.",
+      "job_examples": ["Backend Engineer + AI"],
+      "resources": ["15 years experience"]
+    },
+    "CI/CD": {
+      "description": "Jenkins, GitHub Actions, deployment pipelines. ML pipeline deployment automation. Production engineering discipline — already practised.",
+      "job_examples": ["MLOps Engineer", "ML Platform Engineer"],
+      "resources": ["GitHub Actions in use across all repos"]
+    },
+    "SQL": {
+      "description": "Relational databases, financial data querying. Foundational — market it quietly, don't lead with it for AI/ML roles.",
+      "job_examples": ["Data Engineer + ML", "Backend + AI"],
+      "resources": ["Banking background"]
+    },
+    "MLflow": {
+      "description": "Experiment tracking, model registry, artifact store. Standard MLOps toolchain. Quick to learn — prioritise after RAG, model eval, and agentic AI.",
+      "job_examples": ["MLOps Engineer", "ML Platform Engineer"],
+      "resources": ["MLflow quickstart (1-2 days to basic proficiency)"]
+    },
+    "AI-Assisted Development": {
+      "description": "GitHub Copilot, Claude Code — already using daily. Make it explicit in applications. Growing demand — but will be table stakes in 12 months.",
+      "job_examples": ["Senior Java Engineer - AI Modernisation"],
+      "resources": ["Claude Code (this conversation)", "GitHub Copilot"]
+    },
+    "Ollama": {
+      "description": "Local LLM runtime. Used in ml-portfolio for offline inference. Growing for enterprise air-gapped deployments. Already a YES skill.",
+      "job_examples": [],
+      "resources": ["ml-portfolio Ollama integration"]
+    },
+    "Make.com / n8n": {
+      "description": "2 appearances. Workflow automation for AI pipelines. Low-code. Monitor demand — may grow as non-technical AI adoption increases.",
+      "job_examples": [],
+      "resources": ["n8n (self-hostable)", "Make.com (managed)"]
+    },
+    "LangChain4j": {
+      "description": "Java LLM framework. Reviewed in Springer book. Java-native AI agent construction. Watch enterprise Java adoption curve.",
+      "job_examples": [],
+      "resources": ["Springer Nature book (reviewed)", "LangChain4j docs"]
+    },
+    "Pinecone": {
+      "description": "Managed vector database. Production alternative to self-hosted FAISS. Assess before investing time — depends on target client stack.",
+      "job_examples": [],
+      "resources": ["Pinecone docs", "Compare: Pinecone vs Weaviate vs Qdrant"]
+    },
+    "Kafka / Event Streaming": {
+      "description": "Santander Kafka Streams experience. Monitor for real-time ML inference patterns — streaming feature pipelines are a growing MLOps use case.",
+      "job_examples": [],
+      "resources": ["Santander Kafka Streams experience"]
+    },
+    "Java": {
+      "description": "15 years production experience across Citi, Deutsche Bank, Santander, Credit Suisse. Your credibility anchor — but not your pitch for AI/ML roles. Mention as context, don't lead with it.",
+      "job_examples": [],
+      "resources": ["Stop marketing as primary skill in AI/ML applications"]
+    },
+    "Spring Boot": {
+      "description": "Core Java framework. Useful as bridge (Spring AI) but Spring Boot itself is not the story for AI/ML transition. Mention only as context.",
+      "job_examples": [],
+      "resources": []
+    },
+    "Docker": {
+      "description": "Table stakes. Everyone has it. Not a differentiator for senior AI/ML roles. Mention in CV but don't lead with it.",
+      "job_examples": [],
+      "resources": []
+    },
+    "Go (Golang)": {
+      "description": "Xebia role required it. Hard dealbreaker gap. No investment — not aligned to Java→AI/ML transition path.",
+      "job_examples": [],
+      "resources": []
+    },
+    "React / Node.js": {
+      "description": "Not your strength. Avoid full-stack roles entirely. If a role requires React, score 0 immediately.",
+      "job_examples": [],
+      "resources": []
+    },
+    "PyTorch": {
+      "description": "Required for pure ML research. Not your target — MLOps/platform/backend+AI roles don't require this. Don't invest time.",
+      "job_examples": [],
+      "resources": []
+    },
+    "TensorFlow": {
+      "description": "Deep learning framework. PyTorch more prevalent. Neither is your target direction. Deprioritise.",
+      "job_examples": [],
+      "resources": []
+    }
+  }
+}
