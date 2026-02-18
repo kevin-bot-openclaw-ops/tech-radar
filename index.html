@@ -1,0 +1,575 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Jerzy Plocha — Technology Radar</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #0d1117; color: #e6edf3; min-height: 100vh; }
+  header { padding: 24px 32px; border-bottom: 1px solid #21262d; display: flex; justify-content: space-between; align-items: center; }
+  header h1 { font-size: 20px; font-weight: 600; }
+  header .meta { font-size: 13px; color: #8b949e; }
+  .filters { padding: 16px 32px; display: flex; gap: 8px; flex-wrap: wrap; border-bottom: 1px solid #21262d; }
+  .filter-btn { padding: 6px 14px; border-radius: 20px; border: 1px solid #30363d; background: #161b22; color: #8b949e; cursor: pointer; font-size: 13px; transition: all 0.15s; }
+  .filter-btn:hover, .filter-btn.active { border-color: #58a6ff; color: #58a6ff; background: rgba(88,166,255,0.1); }
+  .content { padding: 24px 32px; display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; }
+  .quadrant { background: #161b22; border: 1px solid #21262d; border-radius: 8px; overflow: hidden; }
+  .quadrant-header { padding: 14px 16px; background: #1c2128; border-bottom: 1px solid #21262d; font-weight: 600; font-size: 14px; }
+  .ring-section { padding: 4px 0; }
+  .ring-label { padding: 8px 16px 4px; font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; }
+  .blip { padding: 8px 16px; display: flex; align-items: flex-start; gap: 10px; border-bottom: 1px solid #21262d; cursor: pointer; transition: background 0.1s; }
+  .blip:last-child { border-bottom: none; }
+  .blip:hover { background: #1c2128; }
+  .blip-dot { width: 8px; height: 8px; border-radius: 50%; margin-top: 5px; flex-shrink: 0; }
+  .blip-new { width: 0; height: 0; border-left: 5px solid transparent; border-right: 5px solid transparent; border-bottom: 9px solid currentColor; margin-top: 3px; flex-shrink: 0; border-radius: 0; background: none !important; }
+  .blip-content { flex: 1; min-width: 0; }
+  .blip-name { font-size: 13px; font-weight: 500; }
+  .blip-appearances { font-size: 11px; color: #8b949e; margin-top: 2px; }
+  .blip-desc { font-size: 12px; color: #8b949e; margin-top: 4px; display: none; line-height: 1.5; }
+  .blip.expanded .blip-desc { display: block; }
+  .badge { display: inline-block; font-size: 10px; padding: 1px 6px; border-radius: 10px; margin-left: 6px; vertical-align: middle; }
+  .badge-new { background: rgba(88,166,255,0.15); color: #58a6ff; border: 1px solid rgba(88,166,255,0.3); }
+  .stats { padding: 16px 32px; display: flex; gap: 24px; border-top: 1px solid #21262d; font-size: 13px; color: #8b949e; }
+  .stat-value { font-weight: 600; color: #e6edf3; }
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>⚡ Technology Radar</h1>
+    <div style="font-size:13px;color:#8b949e;margin-top:4px;">Jerzy Plocha · AI/ML Engineering Transition</div>
+  </div>
+  <div class="meta">v1.0 · 2026-02-18 · 52 technologies</div>
+</header>
+
+<div class="filters">
+  <button class="filter-btn active" data-ring="all">All</button>
+  <button class="filter-btn" data-ring="adopt" style="color:#5cb85c">● Adopt</button>
+  <button class="filter-btn" data-ring="trial" style="color:#5bc0de">● Trial</button>
+  <button class="filter-btn" data-ring="assess" style="color:#f0ad4e">● Assess</button>
+  <button class="filter-btn" data-ring="hold" style="color:#d9534f">● Hold</button>
+</div>
+
+<div class="content" id="radar-content"></div>
+
+<div class="stats" id="stats"></div>
+
+<script>
+const RADAR_DATA = {
+  "date": "2026-02-18",
+  "version": "1.0",
+  "author": "Jerzy Plocha",
+  "blips": [
+    {
+      "name": "Azure",
+      "quadrant": "languages-frameworks",
+      "ring": "adopt",
+      "isNew": false,
+      "description": "5 appearances in job scan. Primary cloud for AI/ML workloads in EU banking.",
+      "appearances": 5
+    },
+    {
+      "name": "Python",
+      "quadrant": "languages-frameworks",
+      "ring": "adopt",
+      "isNew": false,
+      "description": "3 appearances. Required for ML engineering roles. FastAPI, pandas, numpy.",
+      "appearances": 3
+    },
+    {
+      "name": "Java",
+      "quadrant": "languages-frameworks",
+      "ring": "adopt",
+      "isNew": false,
+      "description": "15 years production experience. Spring ecosystem, enterprise backend.",
+      "appearances": 3
+    },
+    {
+      "name": "Spring Boot",
+      "quadrant": "languages-frameworks",
+      "ring": "adopt",
+      "isNew": false,
+      "description": "Core backend framework. Strong fit for AI-adjacent Java modernisation roles.",
+      "appearances": 2
+    },
+    {
+      "name": "FastAPI",
+      "quadrant": "languages-frameworks",
+      "ring": "adopt",
+      "isNew": false,
+      "description": "Python REST API framework for ML model serving. Used in portfolio projects.",
+      "appearances": 2
+    },
+    {
+      "name": "JavaScript",
+      "quadrant": "languages-frameworks",
+      "ring": "adopt",
+      "isNew": false,
+      "description": "Basic proficiency. Not a primary strength \u2014 keep at adopt, avoid full-stack roles.",
+      "appearances": 1
+    },
+    {
+      "name": "Docker",
+      "quadrant": "platforms",
+      "ring": "adopt",
+      "isNew": false,
+      "description": "Containerisation. Required in most senior AI/ML engineering JDs.",
+      "appearances": 2
+    },
+    {
+      "name": "AWS",
+      "quadrant": "platforms",
+      "ring": "adopt",
+      "isNew": false,
+      "description": "Solutions Architect certified (Apr 2024). Strong positioning for cloud-native AI.",
+      "appearances": 2
+    },
+    {
+      "name": "Kubernetes",
+      "quadrant": "platforms",
+      "ring": "adopt",
+      "isNew": false,
+      "description": "Container orchestration. Credit Suisse deployment experience.",
+      "appearances": 2
+    },
+    {
+      "name": "Microservices",
+      "quadrant": "techniques",
+      "ring": "adopt",
+      "isNew": false,
+      "description": "Core architecture pattern. Santander event-driven, Deutsche Bank modernisation.",
+      "appearances": 2
+    },
+    {
+      "name": "REST API",
+      "quadrant": "techniques",
+      "ring": "adopt",
+      "isNew": false,
+      "description": "API design and implementation. Foundational skill across all roles.",
+      "appearances": 2
+    },
+    {
+      "name": "SQL",
+      "quadrant": "techniques",
+      "ring": "adopt",
+      "isNew": false,
+      "description": "Relational databases. Banking/financial data querying.",
+      "appearances": 2
+    },
+    {
+      "name": "CI/CD",
+      "quadrant": "techniques",
+      "ring": "adopt",
+      "isNew": false,
+      "description": "Jenkins, GitHub Actions. Production engineering discipline.",
+      "appearances": 2
+    },
+    {
+      "name": "DevOps",
+      "quadrant": "techniques",
+      "ring": "adopt",
+      "isNew": false,
+      "description": "Infrastructure as code, deployment pipelines, monitoring.",
+      "appearances": 1
+    },
+    {
+      "name": "Solution Architecture",
+      "quadrant": "techniques",
+      "ring": "adopt",
+      "isNew": false,
+      "description": "Enterprise system design. 15 years tier-1 bank experience.",
+      "appearances": 1
+    },
+    {
+      "name": "Banking Domain",
+      "quadrant": "techniques",
+      "ring": "adopt",
+      "isNew": false,
+      "description": "Payments, ledger reconciliation, credit risk. Key differentiator vs pure ML engineers.",
+      "appearances": 1
+    },
+    {
+      "name": "Terraform",
+      "quadrant": "platforms",
+      "ring": "adopt",
+      "isNew": false,
+      "description": "Infrastructure as code. Growing demand for ML infra provisioning.",
+      "appearances": 1
+    },
+    {
+      "name": "Chatbot Integration",
+      "quadrant": "techniques",
+      "ring": "adopt",
+      "isNew": false,
+      "description": "Conversational AI deployment. LLM-powered chatbots for enterprise.",
+      "appearances": 1
+    },
+    {
+      "name": "RAG Pipeline",
+      "quadrant": "techniques",
+      "ring": "trial",
+      "isNew": true,
+      "description": "7 appearances \u2014 highest demand signal. Portfolio project complete (ml-portfolio repo). FAISS + sentence-transformers + multi-LLM. Interview-ready.",
+      "appearances": 7
+    },
+    {
+      "name": "Agentic AI",
+      "quadrant": "techniques",
+      "ring": "trial",
+      "isNew": true,
+      "description": "3 appearances. LLM agents with tool use. Reviewed in Springer Nature book. Growing fast.",
+      "appearances": 3
+    },
+    {
+      "name": "LLM APIs",
+      "quadrant": "techniques",
+      "ring": "trial",
+      "isNew": true,
+      "description": "3 appearances. OpenAI, Anthropic, Ollama. Used in ml-portfolio. Deployable today.",
+      "appearances": 3
+    },
+    {
+      "name": "LLM Prompt Engineering",
+      "quadrant": "techniques",
+      "ring": "trial",
+      "isNew": true,
+      "description": "3 appearances. Context design, RAG prompt templates, few-shot patterns.",
+      "appearances": 3
+    },
+    {
+      "name": "Vector Databases",
+      "quadrant": "platforms",
+      "ring": "trial",
+      "isNew": true,
+      "description": "2 appearances. FAISS (portfolio), Pinecone, Chroma. RAG dependency \u2014 already in use.",
+      "appearances": 2
+    },
+    {
+      "name": "MCP (Model Context Protocol)",
+      "quadrant": "techniques",
+      "ring": "trial",
+      "isNew": true,
+      "description": "1 appearance. Anthropic standard for AI tool integration. Strategic override: early-mover advantage.",
+      "appearances": 1
+    },
+    {
+      "name": "MLOps",
+      "quadrant": "techniques",
+      "ring": "assess",
+      "isNew": false,
+      "description": "2 appearances. ML CI/CD, model versioning (MLflow), monitoring. Assess before committing.",
+      "appearances": 2
+    },
+    {
+      "name": "MLflow",
+      "quadrant": "platforms",
+      "ring": "assess",
+      "isNew": false,
+      "description": "2 appearances. Experiment tracking, model registry. Worth learning alongside portfolio work.",
+      "appearances": 2
+    },
+    {
+      "name": "AI Model Evaluation / RLHF",
+      "quadrant": "techniques",
+      "ring": "assess",
+      "isNew": false,
+      "description": "2 appearances. Evaluation frameworks, human feedback loops. Research-adjacent.",
+      "appearances": 2
+    },
+    {
+      "name": "LLM Integration",
+      "quadrant": "techniques",
+      "ring": "assess",
+      "isNew": false,
+      "description": "1 appearance. Enterprise LLM deployment patterns. Partially covered by LLM APIs.",
+      "appearances": 1
+    },
+    {
+      "name": "AI-Assisted Dev",
+      "quadrant": "techniques",
+      "ring": "assess",
+      "isNew": false,
+      "description": "2 appearances. GitHub Copilot, Claude Code. Already using daily \u2014 worth making explicit.",
+      "appearances": 2
+    },
+    {
+      "name": "NLP Embeddings",
+      "quadrant": "techniques",
+      "ring": "assess",
+      "isNew": false,
+      "description": "1 appearance. sentence-transformers used in RAG project. Foundational ML skill.",
+      "appearances": 1
+    },
+    {
+      "name": "LLM Inference Infra",
+      "quadrant": "platforms",
+      "ring": "assess",
+      "isNew": false,
+      "description": "2 appearances. vLLM, Ollama, TGI. Production model serving at scale.",
+      "appearances": 2
+    },
+    {
+      "name": "Make.com / n8n",
+      "quadrant": "platforms",
+      "ring": "assess",
+      "isNew": false,
+      "description": "2 appearances. Workflow automation. Low-code AI pipelines. Monitor demand.",
+      "appearances": 2
+    },
+    {
+      "name": "Kafka",
+      "quadrant": "platforms",
+      "ring": "assess",
+      "isNew": false,
+      "description": "Santander event streaming experience. Monitor for ML pipeline use cases.",
+      "appearances": 1
+    },
+    {
+      "name": "LangChain4j",
+      "quadrant": "languages-frameworks",
+      "ring": "assess",
+      "isNew": true,
+      "description": "Java LLM framework. Reviewed in Springer book. Java-native AI development.",
+      "appearances": 1
+    },
+    {
+      "name": "Spring AI",
+      "quadrant": "languages-frameworks",
+      "ring": "assess",
+      "isNew": true,
+      "description": "Spring AI framework. Reviewed in Springer book. Watch adoption curve.",
+      "appearances": 1
+    },
+    {
+      "name": "Ollama",
+      "quadrant": "platforms",
+      "ring": "assess",
+      "isNew": true,
+      "description": "Local LLM runtime. Used in ml-portfolio. Growing for enterprise air-gapped deployments.",
+      "appearances": 1
+    },
+    {
+      "name": "Pinecone",
+      "quadrant": "platforms",
+      "ring": "assess",
+      "isNew": false,
+      "description": "Managed vector database. Evaluate vs FAISS for production scale.",
+      "appearances": 1
+    },
+    {
+      "name": "OpenTelemetry",
+      "quadrant": "platforms",
+      "ring": "assess",
+      "isNew": false,
+      "description": "Observability standard. Emerging requirement for ML system monitoring.",
+      "appearances": 1
+    },
+    {
+      "name": "BigQuery",
+      "quadrant": "platforms",
+      "ring": "assess",
+      "isNew": false,
+      "description": "GCP data warehouse. ML feature store patterns. Monitor for client needs.",
+      "appearances": 1
+    },
+    {
+      "name": "Spark",
+      "quadrant": "platforms",
+      "ring": "assess",
+      "isNew": false,
+      "description": "Distributed data processing. ML pipeline scale. Assess before investing.",
+      "appearances": 1
+    },
+    {
+      "name": "TypeScript",
+      "quadrant": "languages-frameworks",
+      "ring": "assess",
+      "isNew": false,
+      "description": "Typed JS. AI agent tooling often TypeScript. Monitor \u2014 don't invest yet.",
+      "appearances": 1
+    },
+    {
+      "name": "Grafana",
+      "quadrant": "platforms",
+      "ring": "assess",
+      "isNew": false,
+      "description": "Monitoring dashboards. ML system observability. Already adjacent to DevOps work.",
+      "appearances": 1
+    },
+    {
+      "name": "C++",
+      "quadrant": "languages-frameworks",
+      "ring": "hold",
+      "isNew": false,
+      "description": "Elastic required it. Niche requirement. Not worth investment for your career path.",
+      "appearances": 1
+    },
+    {
+      "name": "TCP/IP Networking",
+      "quadrant": "techniques",
+      "ring": "hold",
+      "isNew": false,
+      "description": "Infrastructure-level. Not relevant to AI/ML engineering roles targeted.",
+      "appearances": 0
+    },
+    {
+      "name": "React / Node.js",
+      "quadrant": "languages-frameworks",
+      "ring": "hold",
+      "isNew": false,
+      "description": "Full-stack. Not your strength. Avoid full-stack roles entirely.",
+      "appearances": 1
+    },
+    {
+      "name": "EHR Systems",
+      "quadrant": "techniques",
+      "ring": "hold",
+      "isNew": false,
+      "description": "Healthcare domain. Not your expertise. Avoid health-specific AI roles.",
+      "appearances": 0
+    },
+    {
+      "name": "Kubeflow",
+      "quadrant": "platforms",
+      "ring": "hold",
+      "isNew": false,
+      "description": "ML orchestration on K8s. Steep learning curve. MLflow is better ROI for now.",
+      "appearances": 1
+    },
+    {
+      "name": "HubSpot API",
+      "quadrant": "platforms",
+      "ring": "hold",
+      "isNew": false,
+      "description": "CRM integration. Applied to one HubSpot job \u2014 not strategic direction.",
+      "appearances": 1
+    },
+    {
+      "name": "Go (Golang)",
+      "quadrant": "languages-frameworks",
+      "ring": "hold",
+      "isNew": false,
+      "description": "Xebia required it. Dealbreaker skill gap. Deprioritise.",
+      "appearances": 1
+    },
+    {
+      "name": "TensorFlow",
+      "quadrant": "languages-frameworks",
+      "ring": "hold",
+      "isNew": false,
+      "description": "Deep learning framework. PyTorch more prevalent. Assess only if specific role demands it.",
+      "appearances": 1
+    },
+    {
+      "name": "PyTorch",
+      "quadrant": "languages-frameworks",
+      "ring": "hold",
+      "isNew": false,
+      "description": "Deep learning. Required for pure ML research roles. Not your target \u2014 hold for now.",
+      "appearances": 1
+    },
+    {
+      "name": "Cognigy / Kore.ai",
+      "quadrant": "platforms",
+      "ring": "hold",
+      "isNew": false,
+      "description": "Conversational AI platforms. Vendor-specific. Avoid.",
+      "appearances": 1
+    }
+  ]
+};
+
+const RING_COLORS = {
+  adopt: '#5cb85c', trial: '#5bc0de', assess: '#f0ad4e', hold: '#d9534f'
+};
+const RING_ORDER = ['adopt', 'trial', 'assess', 'hold'];
+const QUADRANT_LABELS = {
+  'languages-frameworks': 'Languages & Frameworks',
+  'platforms': 'Platforms & Tools',
+  'techniques': 'Techniques',
+  'tools': 'Tools'
+};
+
+let activeRing = 'all';
+
+function render() {
+  const blips = RADAR_DATA.blips.filter(b => activeRing === 'all' || b.ring === activeRing);
+  
+  // Group by quadrant
+  const byQuadrant = {};
+  blips.forEach(b => {
+    if (!byQuadrant[b.quadrant]) byQuadrant[b.quadrant] = [];
+    byQuadrant[b.quadrant].push(b);
+  });
+
+  const content = document.getElementById('radar-content');
+  content.innerHTML = '';
+
+  Object.entries(byQuadrant).forEach(([q, qBlips]) => {
+    const div = document.createElement('div');
+    div.className = 'quadrant';
+
+    const header = document.createElement('div');
+    header.className = 'quadrant-header';
+    header.textContent = QUADRANT_LABELS[q] || q;
+    div.appendChild(header);
+
+    // Group by ring
+    RING_ORDER.forEach(ring => {
+      const ringBlips = qBlips.filter(b => b.ring === ring);
+      if (!ringBlips.length) return;
+
+      const section = document.createElement('div');
+      section.className = 'ring-section';
+
+      const label = document.createElement('div');
+      label.className = 'ring-label';
+      label.style.color = RING_COLORS[ring];
+      label.textContent = ring.toUpperCase();
+      section.appendChild(label);
+
+      ringBlips.sort((a,b) => (b.appearances||0) - (a.appearances||0)).forEach(blip => {
+        const el = document.createElement('div');
+        el.className = 'blip';
+        el.innerHTML = `
+          <div class="${blip.isNew ? 'blip-new' : 'blip-dot'}" style="background:${RING_COLORS[ring]};color:${RING_COLORS[ring]}"></div>
+          <div class="blip-content">
+            <div class="blip-name">
+              ${blip.name}
+              ${blip.isNew ? '<span class="badge badge-new">NEW</span>' : ''}
+            </div>
+            ${blip.appearances ? `<div class="blip-appearances">${blip.appearances} job signal${blip.appearances>1?'s':''}</div>` : ''}
+            <div class="blip-desc">${blip.description}</div>
+          </div>
+        `;
+        el.addEventListener('click', () => el.classList.toggle('expanded'));
+        section.appendChild(el);
+      });
+
+      div.appendChild(section);
+    });
+
+    content.appendChild(div);
+  });
+
+  // Stats
+  const counts = RING_ORDER.map(r => `<div><span class="stat-value">${blips.filter(b=>b.ring===r).length}</span> ${r}</div>`);
+  document.getElementById('stats').innerHTML = `<div><span class="stat-value">${blips.length}</span> total</div>` + counts.join('');
+}
+
+// Filter buttons
+document.querySelectorAll('.filter-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    activeRing = btn.dataset.ring;
+    document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    render();
+  });
+});
+
+render();
+</script>
+</body>
+</html>

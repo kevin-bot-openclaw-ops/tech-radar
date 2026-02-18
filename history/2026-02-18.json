@@ -1,0 +1,423 @@
+{
+  "date": "2026-02-18",
+  "version": "1.0",
+  "author": "Jerzy Plocha",
+  "blips": [
+    {
+      "name": "Azure",
+      "quadrant": "languages-frameworks",
+      "ring": "adopt",
+      "isNew": false,
+      "description": "5 appearances in job scan. Primary cloud for AI/ML workloads in EU banking.",
+      "appearances": 5
+    },
+    {
+      "name": "Python",
+      "quadrant": "languages-frameworks",
+      "ring": "adopt",
+      "isNew": false,
+      "description": "3 appearances. Required for ML engineering roles. FastAPI, pandas, numpy.",
+      "appearances": 3
+    },
+    {
+      "name": "Java",
+      "quadrant": "languages-frameworks",
+      "ring": "adopt",
+      "isNew": false,
+      "description": "15 years production experience. Spring ecosystem, enterprise backend.",
+      "appearances": 3
+    },
+    {
+      "name": "Spring Boot",
+      "quadrant": "languages-frameworks",
+      "ring": "adopt",
+      "isNew": false,
+      "description": "Core backend framework. Strong fit for AI-adjacent Java modernisation roles.",
+      "appearances": 2
+    },
+    {
+      "name": "FastAPI",
+      "quadrant": "languages-frameworks",
+      "ring": "adopt",
+      "isNew": false,
+      "description": "Python REST API framework for ML model serving. Used in portfolio projects.",
+      "appearances": 2
+    },
+    {
+      "name": "JavaScript",
+      "quadrant": "languages-frameworks",
+      "ring": "adopt",
+      "isNew": false,
+      "description": "Basic proficiency. Not a primary strength \u2014 keep at adopt, avoid full-stack roles.",
+      "appearances": 1
+    },
+    {
+      "name": "Docker",
+      "quadrant": "platforms",
+      "ring": "adopt",
+      "isNew": false,
+      "description": "Containerisation. Required in most senior AI/ML engineering JDs.",
+      "appearances": 2
+    },
+    {
+      "name": "AWS",
+      "quadrant": "platforms",
+      "ring": "adopt",
+      "isNew": false,
+      "description": "Solutions Architect certified (Apr 2024). Strong positioning for cloud-native AI.",
+      "appearances": 2
+    },
+    {
+      "name": "Kubernetes",
+      "quadrant": "platforms",
+      "ring": "adopt",
+      "isNew": false,
+      "description": "Container orchestration. Credit Suisse deployment experience.",
+      "appearances": 2
+    },
+    {
+      "name": "Microservices",
+      "quadrant": "techniques",
+      "ring": "adopt",
+      "isNew": false,
+      "description": "Core architecture pattern. Santander event-driven, Deutsche Bank modernisation.",
+      "appearances": 2
+    },
+    {
+      "name": "REST API",
+      "quadrant": "techniques",
+      "ring": "adopt",
+      "isNew": false,
+      "description": "API design and implementation. Foundational skill across all roles.",
+      "appearances": 2
+    },
+    {
+      "name": "SQL",
+      "quadrant": "techniques",
+      "ring": "adopt",
+      "isNew": false,
+      "description": "Relational databases. Banking/financial data querying.",
+      "appearances": 2
+    },
+    {
+      "name": "CI/CD",
+      "quadrant": "techniques",
+      "ring": "adopt",
+      "isNew": false,
+      "description": "Jenkins, GitHub Actions. Production engineering discipline.",
+      "appearances": 2
+    },
+    {
+      "name": "DevOps",
+      "quadrant": "techniques",
+      "ring": "adopt",
+      "isNew": false,
+      "description": "Infrastructure as code, deployment pipelines, monitoring.",
+      "appearances": 1
+    },
+    {
+      "name": "Solution Architecture",
+      "quadrant": "techniques",
+      "ring": "adopt",
+      "isNew": false,
+      "description": "Enterprise system design. 15 years tier-1 bank experience.",
+      "appearances": 1
+    },
+    {
+      "name": "Banking Domain",
+      "quadrant": "techniques",
+      "ring": "adopt",
+      "isNew": false,
+      "description": "Payments, ledger reconciliation, credit risk. Key differentiator vs pure ML engineers.",
+      "appearances": 1
+    },
+    {
+      "name": "Terraform",
+      "quadrant": "platforms",
+      "ring": "adopt",
+      "isNew": false,
+      "description": "Infrastructure as code. Growing demand for ML infra provisioning.",
+      "appearances": 1
+    },
+    {
+      "name": "Chatbot Integration",
+      "quadrant": "techniques",
+      "ring": "adopt",
+      "isNew": false,
+      "description": "Conversational AI deployment. LLM-powered chatbots for enterprise.",
+      "appearances": 1
+    },
+    {
+      "name": "RAG Pipeline",
+      "quadrant": "techniques",
+      "ring": "trial",
+      "isNew": true,
+      "description": "7 appearances \u2014 highest demand signal. Portfolio project complete (ml-portfolio repo). FAISS + sentence-transformers + multi-LLM. Interview-ready.",
+      "appearances": 7
+    },
+    {
+      "name": "Agentic AI",
+      "quadrant": "techniques",
+      "ring": "trial",
+      "isNew": true,
+      "description": "3 appearances. LLM agents with tool use. Reviewed in Springer Nature book. Growing fast.",
+      "appearances": 3
+    },
+    {
+      "name": "LLM APIs",
+      "quadrant": "techniques",
+      "ring": "trial",
+      "isNew": true,
+      "description": "3 appearances. OpenAI, Anthropic, Ollama. Used in ml-portfolio. Deployable today.",
+      "appearances": 3
+    },
+    {
+      "name": "LLM Prompt Engineering",
+      "quadrant": "techniques",
+      "ring": "trial",
+      "isNew": true,
+      "description": "3 appearances. Context design, RAG prompt templates, few-shot patterns.",
+      "appearances": 3
+    },
+    {
+      "name": "Vector Databases",
+      "quadrant": "platforms",
+      "ring": "trial",
+      "isNew": true,
+      "description": "2 appearances. FAISS (portfolio), Pinecone, Chroma. RAG dependency \u2014 already in use.",
+      "appearances": 2
+    },
+    {
+      "name": "MCP (Model Context Protocol)",
+      "quadrant": "techniques",
+      "ring": "trial",
+      "isNew": true,
+      "description": "1 appearance. Anthropic standard for AI tool integration. Strategic override: early-mover advantage.",
+      "appearances": 1
+    },
+    {
+      "name": "MLOps",
+      "quadrant": "techniques",
+      "ring": "assess",
+      "isNew": false,
+      "description": "2 appearances. ML CI/CD, model versioning (MLflow), monitoring. Assess before committing.",
+      "appearances": 2
+    },
+    {
+      "name": "MLflow",
+      "quadrant": "platforms",
+      "ring": "assess",
+      "isNew": false,
+      "description": "2 appearances. Experiment tracking, model registry. Worth learning alongside portfolio work.",
+      "appearances": 2
+    },
+    {
+      "name": "AI Model Evaluation / RLHF",
+      "quadrant": "techniques",
+      "ring": "assess",
+      "isNew": false,
+      "description": "2 appearances. Evaluation frameworks, human feedback loops. Research-adjacent.",
+      "appearances": 2
+    },
+    {
+      "name": "LLM Integration",
+      "quadrant": "techniques",
+      "ring": "assess",
+      "isNew": false,
+      "description": "1 appearance. Enterprise LLM deployment patterns. Partially covered by LLM APIs.",
+      "appearances": 1
+    },
+    {
+      "name": "AI-Assisted Dev",
+      "quadrant": "techniques",
+      "ring": "assess",
+      "isNew": false,
+      "description": "2 appearances. GitHub Copilot, Claude Code. Already using daily \u2014 worth making explicit.",
+      "appearances": 2
+    },
+    {
+      "name": "NLP Embeddings",
+      "quadrant": "techniques",
+      "ring": "assess",
+      "isNew": false,
+      "description": "1 appearance. sentence-transformers used in RAG project. Foundational ML skill.",
+      "appearances": 1
+    },
+    {
+      "name": "LLM Inference Infra",
+      "quadrant": "platforms",
+      "ring": "assess",
+      "isNew": false,
+      "description": "2 appearances. vLLM, Ollama, TGI. Production model serving at scale.",
+      "appearances": 2
+    },
+    {
+      "name": "Make.com / n8n",
+      "quadrant": "platforms",
+      "ring": "assess",
+      "isNew": false,
+      "description": "2 appearances. Workflow automation. Low-code AI pipelines. Monitor demand.",
+      "appearances": 2
+    },
+    {
+      "name": "Kafka",
+      "quadrant": "platforms",
+      "ring": "assess",
+      "isNew": false,
+      "description": "Santander event streaming experience. Monitor for ML pipeline use cases.",
+      "appearances": 1
+    },
+    {
+      "name": "LangChain4j",
+      "quadrant": "languages-frameworks",
+      "ring": "assess",
+      "isNew": true,
+      "description": "Java LLM framework. Reviewed in Springer book. Java-native AI development.",
+      "appearances": 1
+    },
+    {
+      "name": "Spring AI",
+      "quadrant": "languages-frameworks",
+      "ring": "assess",
+      "isNew": true,
+      "description": "Spring AI framework. Reviewed in Springer book. Watch adoption curve.",
+      "appearances": 1
+    },
+    {
+      "name": "Ollama",
+      "quadrant": "platforms",
+      "ring": "assess",
+      "isNew": true,
+      "description": "Local LLM runtime. Used in ml-portfolio. Growing for enterprise air-gapped deployments.",
+      "appearances": 1
+    },
+    {
+      "name": "Pinecone",
+      "quadrant": "platforms",
+      "ring": "assess",
+      "isNew": false,
+      "description": "Managed vector database. Evaluate vs FAISS for production scale.",
+      "appearances": 1
+    },
+    {
+      "name": "OpenTelemetry",
+      "quadrant": "platforms",
+      "ring": "assess",
+      "isNew": false,
+      "description": "Observability standard. Emerging requirement for ML system monitoring.",
+      "appearances": 1
+    },
+    {
+      "name": "BigQuery",
+      "quadrant": "platforms",
+      "ring": "assess",
+      "isNew": false,
+      "description": "GCP data warehouse. ML feature store patterns. Monitor for client needs.",
+      "appearances": 1
+    },
+    {
+      "name": "Spark",
+      "quadrant": "platforms",
+      "ring": "assess",
+      "isNew": false,
+      "description": "Distributed data processing. ML pipeline scale. Assess before investing.",
+      "appearances": 1
+    },
+    {
+      "name": "TypeScript",
+      "quadrant": "languages-frameworks",
+      "ring": "assess",
+      "isNew": false,
+      "description": "Typed JS. AI agent tooling often TypeScript. Monitor \u2014 don't invest yet.",
+      "appearances": 1
+    },
+    {
+      "name": "Grafana",
+      "quadrant": "platforms",
+      "ring": "assess",
+      "isNew": false,
+      "description": "Monitoring dashboards. ML system observability. Already adjacent to DevOps work.",
+      "appearances": 1
+    },
+    {
+      "name": "C++",
+      "quadrant": "languages-frameworks",
+      "ring": "hold",
+      "isNew": false,
+      "description": "Elastic required it. Niche requirement. Not worth investment for your career path.",
+      "appearances": 1
+    },
+    {
+      "name": "TCP/IP Networking",
+      "quadrant": "techniques",
+      "ring": "hold",
+      "isNew": false,
+      "description": "Infrastructure-level. Not relevant to AI/ML engineering roles targeted.",
+      "appearances": 0
+    },
+    {
+      "name": "React / Node.js",
+      "quadrant": "languages-frameworks",
+      "ring": "hold",
+      "isNew": false,
+      "description": "Full-stack. Not your strength. Avoid full-stack roles entirely.",
+      "appearances": 1
+    },
+    {
+      "name": "EHR Systems",
+      "quadrant": "techniques",
+      "ring": "hold",
+      "isNew": false,
+      "description": "Healthcare domain. Not your expertise. Avoid health-specific AI roles.",
+      "appearances": 0
+    },
+    {
+      "name": "Kubeflow",
+      "quadrant": "platforms",
+      "ring": "hold",
+      "isNew": false,
+      "description": "ML orchestration on K8s. Steep learning curve. MLflow is better ROI for now.",
+      "appearances": 1
+    },
+    {
+      "name": "HubSpot API",
+      "quadrant": "platforms",
+      "ring": "hold",
+      "isNew": false,
+      "description": "CRM integration. Applied to one HubSpot job \u2014 not strategic direction.",
+      "appearances": 1
+    },
+    {
+      "name": "Go (Golang)",
+      "quadrant": "languages-frameworks",
+      "ring": "hold",
+      "isNew": false,
+      "description": "Xebia required it. Dealbreaker skill gap. Deprioritise.",
+      "appearances": 1
+    },
+    {
+      "name": "TensorFlow",
+      "quadrant": "languages-frameworks",
+      "ring": "hold",
+      "isNew": false,
+      "description": "Deep learning framework. PyTorch more prevalent. Assess only if specific role demands it.",
+      "appearances": 1
+    },
+    {
+      "name": "PyTorch",
+      "quadrant": "languages-frameworks",
+      "ring": "hold",
+      "isNew": false,
+      "description": "Deep learning. Required for pure ML research roles. Not your target \u2014 hold for now.",
+      "appearances": 1
+    },
+    {
+      "name": "Cognigy / Kore.ai",
+      "quadrant": "platforms",
+      "ring": "hold",
+      "isNew": false,
+      "description": "Conversational AI platforms. Vendor-specific. Avoid.",
+      "appearances": 1
+    }
+  ]
+}
