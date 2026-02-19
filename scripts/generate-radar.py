@@ -1,393 +1,635 @@
 #!/usr/bin/env python3
 """
-generate-radar.py v3 — Transition-focused radar generator.
+generate-radar.py -- Transform skills-demand.md into a Transition Radar
 
-Produces a self-hosted index.html that fetches radar.json and descriptions.json
-at runtime. No hardcoded blip arrays — radar.json is the single source of truth.
+This is NOT a ThoughtWorks org radar. This is a TRANSITION radar that answers:
+"Where should Jurek spend his 15 hrs/week to land a €150k+ AI/ML role?"
+
+Key concept: every skill gets a CATEGORY (ai_core/bridge/enabler/legacy/irrelevant)
+and a TRANSITION SCORE that determines priority. The radar is opinionated --
+it deliberately deprioritizes legacy engineering skills and highlights AI/ML gaps.
 
 Usage:
-    python3 scripts/generate-radar.py
+    python generate-radar.py [path/to/skills-demand.md] [output/radar.json]
 """
 
 import json
+import re
 import sys
+from datetime import datetime, date
+from collections import defaultdict
 from pathlib import Path
-from datetime import date
-
-ROOT = Path(__file__).parent.parent
-RADAR_JSON = ROOT / "radar.json"
-DESCRIPTIONS_JSON = ROOT / "descriptions.json"
-INDEX_HTML = ROOT / "index.html"
-HISTORY_DIR = ROOT / "history"
-
-CATEGORY_WEIGHTS = {"ai_core": 10, "bridge": 8, "enabler": 4, "legacy": 1, "irrelevant": 0}
-GAP_BONUS = {"LEARNING": 5, "NO": 2, "YES": 0}
-RING_ORDER = ["trial", "adopt", "assess", "hold"]
 
 
-def compute_score(blip: dict) -> int:
-    """Transition score = CATEGORY_WEIGHT + (demand * 3) + GAP_BONUS"""
-    cat = CATEGORY_WEIGHTS.get(blip.get("category", "irrelevant"), 0)
-    demand = blip.get("demand", 0) * 3
-    gap = GAP_BONUS.get(blip.get("gap", "YES"), 0)
-    return cat + demand + gap
+# =============================================================================
+# SKILL CATEGORIES -- The opinion layer
+# =============================================================================
+# Every skill must be classified. This is the most important configuration.
+# ai_core: Pure AI/ML. Learning this IS the transition.
+# bridge: Combines engineering + AI. Jurek's unique angle.
+# enabler: Foundation that enables AI work. Worth marketing if you have it.
+# legacy: Pure engineering. Doesn't differentiate from other Java devs.
+# irrelevant: Wrong direction. Don't invest.
+
+CATEGORY_MAP = {
+    # --- ai_core (weight: 10) ---
+    # Canonical names (post-normalization)
+    "rag pipeline": "ai_core",
+    "agentic ai systems": "ai_core",
+    "llm apis (production)": "ai_core",
+    "llm prompt engineering": "ai_core",
+    "vector databases": "ai_core",
+    "ai model evaluation / rlhf": "ai_core",
+    "nlp (embeddings, ranking)": "ai_core",  # canonical name after normalization
+    "mlops / ml infrastructure": "ai_core",
+    "ml frameworks (pytorch/tensorflow)": "ai_core",
+    "distributed ml systems": "ai_core",
+    "llm inference infrastructure": "ai_core",
+    "ai training data engineering": "ai_core",
+    "data science / analytics": "ai_core",
+    "search / ranking systems": "ai_core",
+    "langchain / llamaindex": "ai_core",
+    # Raw input variants (pre-normalization)
+    "ai agent development": "ai_core",
+    "ai prompt engineering": "ai_core",
+    "vector databases (pinecone, weaviate)": "ai_core",
+    "llm evaluation pipelines": "ai_core",
+    "nlp (embeddings, ranking, classification)": "ai_core",
+    "nlu / conversational ai": "ai_core",
+    "llm inference infrastructure (vllm)": "ai_core",
+    "ml model inference systems": "ai_core",
+    "multi-modal models": "ai_core",
+
+    # --- bridge (weight: 8) ---
+    # Canonical names (post-normalization)
+    "mcp (model context protocol)": "bridge",
+    "llm integration": "bridge",
+    "ai-assisted development": "bridge",  # canonical name after normalization
+    "llm email drafting": "bridge",
+    "chatbot integration": "bridge",
+    "banking/payments domain": "bridge",  # bridge because banking+AI is the unique niche
+    # Raw input variants (pre-normalization)
+    "llm integration architecture": "bridge",
+    "ai-assisted development (llm tools)": "bridge",
+    "ai solution implementation": "bridge",
+    "legacy system refactoring (ai)": "bridge",
+    "credit risk modeling": "bridge",
+    "finance data governance": "bridge",
+
+    # --- enabler (weight: 4) ---
+    "python": "enabler",
+    "python (5+ yrs production)": "enabler",
+    "fastapi": "enabler",
+    "docker": "enabler",
+    "docker/containers": "enabler",
+    "kubernetes": "enabler",
+    "kubernetes / docker / terraform": "enabler",
+    "terraform": "enabler",
+    "aws": "enabler",
+    "aws (solutions architect cert)": "enabler",
+    "azure": "enabler",
+    "azure cloud": "enabler",
+    "azure openai service": "enabler",
+    "azure ai search": "enabler",
+    "azure document intelligence": "enabler",
+    "gcp": "enabler",
+    "mlflow": "enabler",
+    "mlflow / huggingface": "enabler",
+    "databricks": "enabler",
+    "make.com/n8n": "enabler",
+    "n8n / zapier automation": "enabler",
+    "huggingface": "enabler",
+    "claude/openai api": "enabler",
+    "aws bedrock": "enabler",
+
+    # --- legacy (weight: 1) ---
+    "java": "legacy",
+    "spring/spring boot": "legacy",
+    "javascript": "legacy",
+    "typescript": "legacy",
+    "sql/postgresql": "legacy",
+    "microservices architecture": "legacy",
+    "rest api design": "legacy",
+    "ci/cd": "legacy",
+    "devops": "legacy",
+    "solution architecture": "legacy",
+    "hld/lld docs": "legacy",
+    "architecture diagrams / documentation": "legacy",
+    "strangler fig / microservices migration": "legacy",
+    "gitops (flux, github actions)": "legacy",
+
+    # --- irrelevant (weight: 0) ---
+    "c++": "irrelevant",
+    "c/c++ (memory mgmt, build systems)": "irrelevant",
+    "react / node.js": "irrelevant",
+    "tcp/ip / ssl/tls / vpn": "irrelevant",
+    "ehr / health data integration": "irrelevant",
+    "hubspot api": "irrelevant",
+    "xero / hubspot crm integration": "irrelevant",
+    "google workspace api": "irrelevant",
+    "ocr / document processing": "irrelevant",
+    "kubeflow": "irrelevant",
+    "dialogflow cx": "irrelevant",
+    "ml platform components": "irrelevant",
+    "airflow / etl orchestration": "irrelevant",
+}
 
 
-def load_and_validate(path: Path) -> dict:
-    with open(path) as f:
-        data = json.load(f)
-    fixed = 0
-    for blip in data["blips"]:
-        computed = compute_score(blip)
-        if computed != blip.get("transition_score", -1):
-            blip["transition_score"] = computed
-            fixed += 1
-    if fixed:
-        print(f"  Auto-corrected {fixed} transition_score values")
-    return data
+# =============================================================================
+# QUADRANT CLASSIFICATION -- Category of technology (unchanged from v1)
+# =============================================================================
+QUADRANT_MAP = {
+    # Languages & Frameworks
+    "java": "Languages & Frameworks",
+    "python": "Languages & Frameworks",
+    "python (5+ yrs production)": "Languages & Frameworks",
+    "typescript": "Languages & Frameworks",
+    "javascript": "Languages & Frameworks",
+    "c++": "Languages & Frameworks",
+    "c/c++ (memory mgmt, build systems)": "Languages & Frameworks",
+    "spring boot": "Languages & Frameworks",  # canonical name
+    "spring/spring boot": "Languages & Frameworks",
+    "fastapi": "Languages & Frameworks",
+    "langchain / llamaindex": "Languages & Frameworks",
+    "react / node.js": "Languages & Frameworks",
+    "sql/postgresql": "Languages & Frameworks",
+    "ml frameworks (pytorch/tensorflow)": "Languages & Frameworks",
+    "multi-modal models": "Techniques",
+
+    # Tools
+    "docker/containers": "Tools",
+    "docker": "Tools",
+    "kubernetes": "Tools",
+    "kubernetes / docker / terraform": "Tools",
+    "terraform": "Tools",
+    "mlflow": "Tools",
+    "mlflow / huggingface": "Tools",
+    "databricks": "Tools",
+    "kubeflow": "Tools",
+    "airflow / etl orchestration": "Tools",
+    "make.com/n8n": "Tools",
+    "n8n / zapier automation": "Tools",
+    "hubspot api": "Tools",
+    "dialogflow cx": "Tools",
+    "vector databases": "Tools",
+    "vector databases (pinecone, weaviate)": "Tools",
+    "llm inference infrastructure": "Tools",
+    "llm inference infrastructure (vllm)": "Tools",
+    "gitops (flux, github actions)": "Tools",
+    "ml model inference systems": "Tools",
+    "xero / hubspot crm integration": "Tools",
+    "google workspace api": "Tools",
+
+    # Techniques
+    "rag pipeline": "Techniques",
+    "agentic ai systems": "Techniques",
+    "ai agent development": "Techniques",
+    "llm prompt engineering": "Techniques",
+    "ai prompt engineering": "Techniques",
+    "ai model evaluation / rlhf": "Techniques",
+    "llm evaluation pipelines": "Techniques",
+    "llm integration": "Techniques",
+    "llm integration architecture": "Techniques",
+    "llm email drafting": "Techniques",
+    "mcp (model context protocol)": "Techniques",
+    "microservices architecture": "Techniques",
+    "rest api design": "Techniques",
+    "ci/cd": "Techniques",
+    "devops": "Techniques",
+    "mlops / ml infrastructure": "Techniques",
+    "nlp (embeddings, ranking, classification)": "Techniques",
+    "nlu / conversational ai": "Techniques",
+    "chatbot integration": "Techniques",
+    "ai-assisted development (llm tools)": "Techniques",
+    "ai solution implementation": "Techniques",
+    "ai training data engineering": "Techniques",
+    "banking/payments domain": "Techniques",
+    "credit risk modeling": "Techniques",
+    "finance data governance": "Techniques",
+    "solution architecture": "Techniques",  # canonical name
+    "hld/lld docs": "Techniques",
+    "architecture diagrams / documentation": "Techniques",
+    "legacy system refactoring (ai)": "Techniques",
+    "strangler fig / microservices migration": "Techniques",
+    "distributed ml systems": "Techniques",
+    "ml platform components": "Techniques",
+    "ocr / document processing": "Techniques",
+    "tcp/ip / ssl/tls / vpn": "Techniques",
+    "ehr / health data integration": "Techniques",
+    "data science / analytics": "Techniques",
+    "search / ranking systems": "Techniques",
+
+    # Platforms
+    "aws": "Platforms",
+    "aws (solutions architect cert)": "Platforms",
+    "azure": "Platforms",
+    "azure cloud": "Platforms",
+    "azure openai service": "Platforms",
+    "azure ai search": "Platforms",
+    "azure document intelligence": "Platforms",
+    "gcp": "Platforms",
+    "claude/openai api": "Platforms",
+    "llm apis (production)": "Platforms",
+    "llm apis (claude, openai)": "Platforms",
+    "aws bedrock": "Platforms",
+    "huggingface": "Platforms",
+}
 
 
-def save_history(radar: dict):
-    HISTORY_DIR.mkdir(exist_ok=True)
-    snapshot_date = radar.get("date", str(date.today()))
-    path = HISTORY_DIR / f"{snapshot_date}.json"
-    with open(path, "w") as f:
-        json.dump(radar, f, indent=2)
-    print(f"  Snapshot → {path}")
+# =============================================================================
+# SKILL NORMALIZATION -- Map variants to canonical names
+# =============================================================================
+NORMALIZE = {
+    "python (5+ yrs production)": "Python",
+    "spring/spring boot": "Spring Boot",
+    "aws (solutions architect cert)": "AWS",
+    "docker/containers": "Docker",
+    "kubernetes / docker / terraform": "Kubernetes",
+    "vector databases (pinecone, weaviate)": "Vector databases",
+    "llm inference infrastructure (vllm)": "LLM inference infrastructure",
+    "n8n / zapier automation": "Make.com/n8n",
+    "mlflow / huggingface": "MLflow",
+    "claude/openai api": "LLM APIs (production)",
+    "llm apis (claude, openai)": "LLM APIs (production)",
+    "llm apis (production)": "LLM APIs (production)",
+    "ai prompt engineering": "LLM Prompt Engineering",
+    "llm integration architecture": "LLM integration",
+    "llm evaluation pipelines": "AI model evaluation / RLHF",
+    "azure cloud": "Azure",
+    "azure openai service": "Azure",
+    "azure ai search": "Azure",
+    "azure document intelligence": "Azure",
+    "sql/postgresql": "SQL/PostgreSQL",
+    "c/c++ (memory mgmt, build systems)": "C++",
+    "gitops (flux, github actions)": "CI/CD",
+    "ai agent development": "Agentic AI systems",
+    "ai solution implementation": "AI-assisted development",
+    "ai-assisted development (llm tools)": "AI-assisted development",
+    "legacy system refactoring (ai)": "AI-assisted development",
+    "nlp (embeddings, ranking, classification)": "NLP (embeddings, ranking)",
+    "nlu / conversational ai": "NLP (embeddings, ranking)",
+    "hld/lld docs": "Solution Architecture",
+    "architecture diagrams / documentation": "Solution Architecture",
+    "strangler fig / microservices migration": "Microservices architecture",
+    "xero / hubspot crm integration": "HubSpot API",
+    "ml model inference systems": "LLM inference infrastructure",
+    "credit risk modeling": "Banking/payments domain",
+    "finance data governance": "Banking/payments domain",
+}
 
 
-def generate_html(radar: dict) -> str:
-    """Generate an index.html that fetches radar.json at runtime."""
-    version = radar.get("version", "2.0")
-    radar_date = radar.get("date", str(date.today()))
-    total = len(radar["blips"])
-    by_ring = {r: len([b for b in radar["blips"] if b["ring"] == r]) for r in RING_ORDER}
-
-    return f"""<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Transition Radar — Jerzy Plocha</title>
-<style>
-*{{box-sizing:border-box;margin:0;padding:0}}
-body{{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#0d1117;color:#e6edf3;min-height:100vh}}
-
-header{{padding:20px 28px;border-bottom:1px solid #21262d;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px}}
-.header-title{{font-size:18px;font-weight:700}}
-.header-sub{{font-size:12px;color:#8b949e;margin-top:3px}}
-.header-meta{{font-size:12px;color:#8b949e;text-align:right}}
-
-.focus-board{{margin:20px 28px;background:#161b22;border:1px solid #21262d;border-radius:8px;overflow:hidden}}
-.focus-board-header{{padding:12px 16px;background:#1c2128;border-bottom:1px solid #21262d;font-size:13px;font-weight:600;color:#58a6ff;letter-spacing:.04em}}
-.focus-item{{display:flex;gap:12px;padding:12px 16px;border-bottom:1px solid #21262d}}
-.focus-item:last-child{{border-bottom:none}}
-.focus-rank{{font-size:16px;font-weight:700;color:#484f58;width:24px;flex-shrink:0;padding-top:2px}}
-.focus-body{{flex:1;min-width:0}}
-.focus-name{{font-size:13px;font-weight:600;margin-bottom:6px}}
-.focus-bar-wrap{{display:flex;align-items:center;gap:8px;margin-bottom:4px}}
-.focus-bar{{height:6px;background:#58a6ff;border-radius:3px}}
-.focus-score{{font-size:12px;font-weight:700;color:#58a6ff;min-width:28px}}
-.focus-meta{{font-size:11px;color:#8b949e;line-height:1.4}}
-
-.gap-badge{{font-size:10px;padding:1px 6px;border-radius:10px;font-weight:600;margin-left:4px}}
-.gap-learning{{background:rgba(88,166,255,.15);color:#58a6ff;border:1px solid rgba(88,166,255,.3)}}
-.gap-no{{background:rgba(248,81,73,.1);color:#f85149;border:1px solid rgba(248,81,73,.3)}}
-.gap-yes{{background:rgba(63,185,80,.1);color:#3fb950;border:1px solid rgba(63,185,80,.3)}}
-
-.filters{{padding:12px 28px;display:flex;gap:8px;flex-wrap:wrap;border-bottom:1px solid #21262d;align-items:center}}
-.filter-label{{font-size:12px;color:#8b949e;margin-right:4px}}
-.filter-btn{{padding:5px 12px;border-radius:20px;border:1px solid #30363d;background:#161b22;color:#8b949e;cursor:pointer;font-size:12px;transition:all .15s}}
-.filter-btn:hover,.filter-btn.active{{border-color:#58a6ff;color:#58a6ff;background:rgba(88,166,255,.1)}}
-
-.legend{{padding:8px 28px;display:flex;gap:16px;flex-wrap:wrap;border-bottom:1px solid #21262d;font-size:11px;color:#8b949e;align-items:center}}
-
-.radar-grid{{padding:20px 28px;display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:16px}}
-
-.ring-section{{background:#161b22;border:1px solid #21262d;border-radius:8px;overflow:hidden}}
-.ring-header{{padding:12px 14px;border-bottom:1px solid #21262d;display:flex;justify-content:space-between;align-items:center}}
-.ring-name{{font-size:13px;font-weight:700;letter-spacing:.05em}}
-.ring-meaning{{font-size:11px;color:#8b949e;margin-left:8px}}
-.ring-count{{font-size:11px;color:#8b949e;background:#21262d;padding:2px 8px;border-radius:10px}}
-
-.blip{{padding:9px 14px;border-bottom:1px solid #1c2128;cursor:pointer;transition:background .1s}}
-.blip:last-child{{border-bottom:none}}
-.blip:hover{{background:#1c2128}}
-.blip-row{{display:flex;align-items:center;gap:8px}}
-.blip-indicator{{width:10px;height:10px;border-radius:50%;flex-shrink:0}}
-.blip-indicator.new-blip{{border-radius:0;width:0;height:0;background:transparent!important;border-left:5px solid transparent;border-right:5px solid transparent;border-bottom:10px solid var(--cat-color)}}
-.blip-name{{font-size:13px;font-weight:500;flex:1}}
-.blip-score{{font-size:11px;font-weight:700;color:#8b949e}}
-.blip-signals{{font-size:10px;color:#6e7681;margin:2px 0 0 18px}}
-.blip-desc{{display:none;font-size:12px;color:#8b949e;margin:6px 0 2px 18px;line-height:1.5}}
-.blip-jobs{{font-size:11px;color:#3fb950;margin-top:4px}}
-.blip-resources{{font-size:11px;color:#58a6ff;margin-top:4px}}
-.blip.open .blip-desc{{display:block}}
-.new-badge{{font-size:10px;padding:1px 5px;border-radius:6px;background:rgba(88,166,255,.15);color:#58a6ff;border:1px solid rgba(88,166,255,.3);margin-left:4px}}
-
-.hold-body{{display:none}}
-.hold-body.visible{{display:block}}
-.hold-toggle{{font-size:11px;color:#6e7681;padding:8px 14px;text-align:center;cursor:pointer;border-top:none}}
-.hold-toggle:hover{{color:#8b949e}}
-
-.stats{{padding:12px 28px;border-top:1px solid #21262d;display:flex;gap:20px;flex-wrap:wrap;font-size:12px;color:#8b949e}}
-.stat-val{{font-weight:700;color:#e6edf3}}
-.stat-formula{{margin-left:auto;color:#6e7681;font-size:11px}}
-
-.loading{{padding:40px;text-align:center;color:#8b949e}}
-.error{{padding:20px 28px;color:#f85149;background:rgba(248,81,73,.05);border:1px solid rgba(248,81,73,.3);margin:20px 28px;border-radius:8px}}
-</style>
-</head>
-<body>
-
-<header>
-  <div>
-    <div class="header-title">⚡ Transition Radar v{version}</div>
-    <div class="header-sub">Where should 15 hrs/week go to land a senior AI/ML role?</div>
-  </div>
-  <div class="header-meta">
-    {radar_date} · {total} technologies<br>
-    <span style="color:#6e7681">Jerzy Plocha · AI/ML Engineering Transition</span>
-  </div>
-</header>
-
-<div id="focus-board" class="focus-board" style="display:none">
-  <div class="focus-board-header">🎯 FOCUS BOARD — Top 5 Investment Priorities (Trial ring)</div>
-  <div id="focus-items"></div>
-</div>
-
-<div class="filters">
-  <span class="filter-label">Quadrant:</span>
-  <button class="filter-btn active" data-q="all">All</button>
-  <button class="filter-btn" data-q="techniques">Techniques</button>
-  <button class="filter-btn" data-q="platforms">Platforms</button>
-  <button class="filter-btn" data-q="languages-frameworks">Languages</button>
-  <button class="filter-btn" data-q="tools">Tools</button>
-</div>
-
-<div class="legend">
-  <span style="color:#6e7681;margin-right:2px">Category:</span>
-  <span><span style="color:#58a6ff">●</span> AI Core (10)</span>
-  <span><span style="color:#bc8cff">●</span> Bridge (8)</span>
-  <span><span style="color:#3fb950">●</span> Enabler (4)</span>
-  <span><span style="color:#f0883e">●</span> Legacy (1)</span>
-  <span><span style="color:#6e7681">●</span> Irrelevant (0)</span>
-  <span style="margin-left:8px;color:#6e7681">▲ = new this scan · click blip to expand</span>
-</div>
-
-<div id="radar-grid" class="radar-grid"><div class="loading">Loading radar data…</div></div>
-<div id="stats" class="stats"></div>
-
-<script>
-const RING_COLORS  = {{trial:'#58a6ff',adopt:'#3fb950',assess:'#f0ad4e',hold:'#6e7681'}};
-const RING_LABELS  = {{trial:'INVEST HERE',adopt:'MARKET THIS',assess:'WATCH',hold:'IGNORE'}};
-const CAT_COLORS   = {{ai_core:'#58a6ff',bridge:'#bc8cff',enabler:'#3fb950',legacy:'#f0883e',irrelevant:'#6e7681'}};
-const RINGS        = ['trial','adopt','assess','hold'];
-
-let RADAR = null;
-let DESCS = {{}};
-let activeQ = 'all';
-
-async function loadData() {{
-  try {{
-    const [radarRes, descRes] = await Promise.all([
-      fetch('radar.json'),
-      fetch('descriptions.json').catch(() => ({{ok:false}}))
-    ]);
-    if (!radarRes.ok) throw new Error('Failed to load radar.json');
-    RADAR = await radarRes.json();
-    if (descRes.ok) {{
-      const d = await descRes.json();
-      DESCS = d.skills || {{}};
-    }}
-    render();
-  }} catch(e) {{
-    document.getElementById('radar-grid').innerHTML =
-      `<div class="error">⚠️ Error loading radar data: ${{e.message}}<br>
-       When running locally, serve with: <code>python3 -m http.server 8080</code></div>`;
-  }}
-}}
-
-function catColor(cat) {{
-  return CAT_COLORS[cat] || '#6e7681';
-}}
-
-function renderFocusBoard(blips) {{
-  const trial = blips
-    .filter(b => b.ring === 'trial')
-    .sort((a,b) => b.transition_score - a.transition_score)
-    .slice(0,5);
-  if (!trial.length) return;
-  const maxScore = trial[0].transition_score || 1;
-  const board = document.getElementById('focus-board');
-  const items = document.getElementById('focus-items');
-  board.style.display = '';
-  items.innerHTML = trial.map((b,i) => {{
-    const pct = Math.round((b.transition_score / maxScore) * 100);
-    const cc  = catColor(b.category);
-    const gap = (b.gap||'YES').toLowerCase();
-    const desc = DESCS[b.name];
-    const metaText = desc
-      ? desc.description.slice(0,90) + '…'
-      : (b.description||'').slice(0,90) + '…';
-    return `<div class="focus-item">
-      <div class="focus-rank">#${{i+1}}</div>
-      <div class="focus-body">
-        <div class="focus-name">
-          <span style="color:${{cc}}">●</span> ${{b.name}}
-          <span class="gap-badge gap-${{gap}}">${{b.gap||'YES'}}</span>
-        </div>
-        <div class="focus-bar-wrap">
-          <div class="focus-bar" style="width:${{pct}}%"></div>
-          <span class="focus-score">${{b.transition_score}}</span>
-        </div>
-        <div class="focus-meta">${{b.demand}} job signal${{b.demand!==1?'s':''}} · ${{metaText}}</div>
-      </div>
-    </div>`;
-  }}).join('');
-}}
-
-function renderGrid(blips) {{
-  const grid = document.getElementById('radar-grid');
-  grid.innerHTML = '';
-
-  RINGS.forEach(ring => {{
-    let ringBlips = blips.filter(b => b.ring === ring);
-    if (activeQ !== 'all') ringBlips = ringBlips.filter(b => b.quadrant === activeQ);
-    if (!ringBlips.length) return;
-
-    ringBlips.sort((a,b) => b.transition_score - a.transition_score);
-
-    const sec = document.createElement('div');
-    sec.className = 'ring-section';
-    const rc = RING_COLORS[ring];
-
-    const header = document.createElement('div');
-    header.className = 'ring-header';
-    header.innerHTML = `
-      <div>
-        <span class="ring-name" style="color:${{rc}}">${{ring.toUpperCase()}}</span>
-        <span class="ring-meaning">— ${{RING_LABELS[ring]}}</span>
-      </div>
-      <span class="ring-count">${{ringBlips.length}}</span>`;
-    sec.appendChild(header);
-
-    const body = document.createElement('div');
-    body.className = ring === 'hold' ? 'hold-body' : 'ring-body';
-
-    ringBlips.forEach(blip => {{
-      const cc  = catColor(blip.category);
-      const gap = (blip.gap||'YES').toLowerCase();
-      const desc  = DESCS[blip.name];
-      const descText  = desc?.description || blip.description || '';
-      const jobs = (desc?.job_examples || blip.job_examples || []).slice(0,3);
-      const resources = (desc?.resources || []).slice(0,2);
-
-      const el = document.createElement('div');
-      el.className = 'blip';
-      el.style.setProperty('--cat-color', cc);
-
-      const indHtml = blip.isNew
-        ? `<div class="blip-indicator new-blip"></div>`
-        : `<div class="blip-indicator" style="background:${{cc}}"></div>`;
-
-      el.innerHTML = `
-        <div class="blip-row">
-          ${{indHtml}}
-          <span class="blip-name">${{blip.name}}${{blip.isNew?'<span class="new-badge">NEW</span>':''}}</span>
-          <span class="blip-score">${{blip.transition_score}}</span>
-          <span class="gap-badge gap-${{gap}}">${{blip.gap||'YES'}}</span>
-        </div>
-        ${{blip.demand ? `<div class="blip-signals">${{blip.demand}} job signal${{blip.demand!==1?'s':''}}</div>` : ''}}
-        <div class="blip-desc">
-          ${{descText}}
-          ${{jobs.length ? `<div class="blip-jobs">📋 ${{jobs.join(' · ')}}</div>` : ''}}
-          ${{resources.length ? `<div class="blip-resources">→ ${{resources.join(' · ')}}</div>` : ''}}
-        </div>`;
-
-      el.addEventListener('click', () => el.classList.toggle('open'));
-      body.appendChild(el);
-    }});
-
-    sec.appendChild(body);
-
-    if (ring === 'hold') {{
-      const toggle = document.createElement('div');
-      toggle.className = 'hold-toggle';
-      toggle.textContent = `▼ Show ${{ringBlips.length}} deprioritised skills`;
-      toggle.addEventListener('click', () => {{
-        body.classList.toggle('visible');
-        toggle.textContent = body.classList.contains('visible')
-          ? '▲ Hide hold ring'
-          : `▼ Show ${{ringBlips.length}} deprioritised skills`;
-      }});
-      sec.appendChild(toggle);
-    }}
-
-    grid.appendChild(sec);
-  }});
-}}
-
-function renderStats(blips) {{
-  const stats = document.getElementById('stats');
-  const filtered = activeQ === 'all' ? blips : blips.filter(b => b.quadrant === activeQ);
-  const parts = RINGS.map(r => {{
-    const n = filtered.filter(b => b.ring === r).length;
-    return `<div><span class="stat-val">${{n}}</span> ${{r}}</div>`;
-  }});
-  parts.push(`<div class="stat-formula">score = CATEGORY_WEIGHT + (demand×3) + GAP_BONUS</div>`);
-  stats.innerHTML = parts.join('');
-}}
-
-function render() {{
-  if (!RADAR) return;
-  const blips = RADAR.blips;
-  renderFocusBoard(blips);
-  renderGrid(blips);
-  renderStats(blips);
-}}
-
-document.querySelectorAll('.filter-btn[data-q]').forEach(btn => {{
-  btn.addEventListener('click', () => {{
-    activeQ = btn.dataset.q;
-    document.querySelectorAll('[data-q]').forEach(b => b.classList.remove('active'));
-    btn.classList.add('active');
-    render();
-  }});
-}});
-
-loadData();
-</script>
-</body>
-</html>"""
+# =============================================================================
+# MANUAL OVERRIDES -- Strategic bets that override the algorithm
+# =============================================================================
+RING_OVERRIDES = {
+    # Strategic Trial: demand is low but strategic importance is high
+    "MCP (Model Context Protocol)": "Trial",  # Anthropic standard, early-mover advantage
+}
 
 
-def main():
-    print(f"Loading {RADAR_JSON}...")
-    radar = load_and_validate(RADAR_JSON)
+# =============================================================================
+# TRANSITION SCORE -- The core innovation
+# =============================================================================
+CATEGORY_WEIGHT = {
+    "ai_core": 10,
+    "bridge": 8,
+    "enabler": 4,
+    "legacy": 1,
+    "irrelevant": 0,
+}
 
-    blips = radar["blips"]
-    by_ring = {r: [b for b in blips if b["ring"] == r] for r in RING_ORDER}
-    print(f"  {len(blips)} blips — " + " | ".join(f"{r}: {len(by_ring[r])}" for r in RING_ORDER))
-
-    # Save corrected scores back to radar.json
-    with open(RADAR_JSON, "w") as f:
-        json.dump(radar, f, indent=2)
-
-    print(f"Generating {INDEX_HTML} (fetch-based)...")
-    html = generate_html(radar)
-    with open(INDEX_HTML, "w") as f:
-        f.write(html)
-
-    save_history(radar)
-
-    top5 = sorted(by_ring["trial"], key=lambda b: b["transition_score"], reverse=True)[:5]
-    print("\nFocus Board:")
-    for i, b in enumerate(top5, 1):
-        print(f"  #{i} {b['name']:40s} score={b['transition_score']} demand={b['demand']} gap={b['gap']}")
-
-    print("\nDone. Serve locally: python3 -m http.server 8080")
+GAP_BONUS = {
+    "LEARNING": 5,   # Actively closing gap = highest ROI
+    "NO": 2,         # Could learn but haven't started
+    "YES": 0,        # No gap to close
+}
 
 
+def calc_transition_score(category, demand_count, you_have_it):
+    """Calculate how important this skill is for the career transition."""
+    return CATEGORY_WEIGHT[category] + (demand_count * 3) + GAP_BONUS.get(you_have_it, 0)
+
+
+# =============================================================================
+# RING PLACEMENT -- Transition-aware algorithm
+# =============================================================================
+def assign_ring(category, you_have_it, demand_count):
+    """Assign ring based on transition relevance, not just possession."""
+
+    # Rule 1: Irrelevant skills always Hold
+    if category == "irrelevant":
+        return "Hold"
+
+    # Rule 2: Legacy skills with 0 demand = Hold (no transition value)
+    if category == "legacy" and demand_count == 0:
+        return "Hold"
+
+    # Rule 3: TRIAL -- AI-core or bridge skills you need to learn, with demand
+    if category in ("ai_core", "bridge") and you_have_it != "YES" and demand_count >= 2:
+        return "Trial"
+
+    # Rule 4: ADOPT -- skills you have that matter for AI/ML applications
+    if you_have_it == "YES" and category in ("ai_core", "bridge", "enabler") and demand_count >= 1:
+        return "Adopt"
+
+    # Rule 5: Legacy with demand -- still Adopt (Java modernization roles exist)
+    if you_have_it == "YES" and category == "legacy" and demand_count >= 1:
+        return "Adopt"
+
+    # Rule 6: ASSESS -- some AI signal but not enough to invest yet
+    if category in ("ai_core", "bridge") and demand_count >= 1:
+        return "Assess"
+    if category == "enabler" and you_have_it != "YES" and demand_count >= 1:
+        return "Assess"
+
+    # Rule 7: Enabler you have but 0 demand = Hold (don't clutter the radar)
+    if category == "enabler" and demand_count == 0:
+        return "Hold"
+
+    # Rule 8: Everything else = Hold
+    return "Hold"
+
+
+# =============================================================================
+# PARSING -- Same as v1, works correctly
+# =============================================================================
+def normalize_skill(name):
+    """Normalize skill name to canonical form."""
+    lower = name.strip().lower()
+    for key, val in NORMALIZE.items():
+        if lower == key.lower():
+            return val
+    return name.strip()
+
+
+def get_quadrant(skill_name):
+    """Get quadrant for a skill. Default to Techniques if unknown."""
+    lower = skill_name.strip().lower()
+    if lower in QUADRANT_MAP:
+        return QUADRANT_MAP[lower]
+    normalized = normalize_skill(skill_name).lower()
+    if normalized in QUADRANT_MAP:
+        return QUADRANT_MAP[normalized]
+    return "Techniques"
+
+
+def get_category(skill_name):
+    """Get transition category for a skill. Default to legacy if unknown."""
+    lower = skill_name.strip().lower()
+    if lower in CATEGORY_MAP:
+        return CATEGORY_MAP[lower]
+    # Check normalized name
+    normalized = normalize_skill(skill_name).lower()
+    if normalized in CATEGORY_MAP:
+        return CATEGORY_MAP[normalized]
+    # Unknown skills default to legacy (conservative -- won't pollute Trial)
+    return "legacy"
+
+
+def parse_demand_log(content):
+    """Parse the Demand Log table from skills-demand.md."""
+    entries = []
+    in_demand_log = False
+
+    for line in content.split("\n"):
+        if "## Demand Log" in line:
+            in_demand_log = True
+            continue
+        if in_demand_log and line.startswith("## "):
+            break
+        if not in_demand_log:
+            continue
+        if not line.startswith("|") or "Date" in line or "---" in line:
+            continue
+
+        parts = [p.strip() for p in line.split("|")[1:-1]]
+        if len(parts) >= 6:
+            entries.append({
+                "date": parts[0],
+                "skill": parts[1],
+                "job_title": parts[2],
+                "platform": parts[3],
+                "score": int(parts[4]) if parts[4].isdigit() else 0,
+                "you_have_it": parts[5],
+            })
+
+    return entries
+
+
+def parse_baseline_skills(content):
+    """Parse the Current Skills You Have table."""
+    skills = []
+    in_baseline = False
+
+    for line in content.split("\n"):
+        if "## Current Skills You Have" in line:
+            in_baseline = True
+            continue
+        if in_baseline and line.startswith("## "):
+            break
+        if not in_baseline:
+            continue
+        if not line.startswith("|") or "Skill" in line or "---" in line:
+            continue
+
+        parts = [p.strip() for p in line.split("|")[1:-1]]
+        if len(parts) >= 3:
+            skills.append({
+                "skill": parts[0],
+                "level": parts[1],
+                "years": parts[2],
+            })
+
+    return skills
+
+
+# =============================================================================
+# BUILD RADAR
+# =============================================================================
+def build_radar(content):
+    """Build transition radar blips from skills-demand.md content."""
+    demand_entries = parse_demand_log(content)
+    baseline_skills = parse_baseline_skills(content)
+    today = date.today().isoformat()
+
+    # Aggregate demand by normalized skill name
+    skill_data = defaultdict(lambda: {
+        "demand_count": 0,
+        "you_have_it": "NO",
+        "first_seen": None,
+        "last_seen": None,
+        "job_examples": [],
+        "platforms": set(),
+    })
+
+    for entry in demand_entries:
+        canonical = normalize_skill(entry["skill"])
+        sd = skill_data[canonical]
+        sd["demand_count"] += 1
+
+        # Upgrade status: NO -> LEARNING -> YES (never downgrade)
+        priority = {"NO": 0, "LEARNING": 1, "YES": 2}
+        if priority.get(entry["you_have_it"], 0) > priority.get(sd["you_have_it"], 0):
+            sd["you_have_it"] = entry["you_have_it"]
+
+        if sd["first_seen"] is None or entry["date"] < sd["first_seen"]:
+            sd["first_seen"] = entry["date"]
+        if sd["last_seen"] is None or entry["date"] > sd["last_seen"]:
+            sd["last_seen"] = entry["date"]
+
+        job_short = entry["job_title"].split("(")[0].strip()[:40]
+        if job_short not in sd["job_examples"] and len(sd["job_examples"]) < 5:
+            sd["job_examples"].append(job_short)
+        sd["platforms"].add(entry["platform"])
+
+    # Add baseline skills
+    for bs in baseline_skills:
+        canonical = normalize_skill(bs["skill"])
+        if canonical not in skill_data:
+            skill_data[canonical] = {
+                "demand_count": 0,
+                "you_have_it": "YES",
+                "first_seen": "2026-02-01",
+                "last_seen": today,
+                "job_examples": [],
+                "platforms": set(),
+            }
+        else:
+            skill_data[canonical]["you_have_it"] = "YES"
+
+    # Build blips with transition scoring
+    blips = []
+    for name, sd in skill_data.items():
+        category = get_category(name)
+        score = calc_transition_score(category, sd["demand_count"], sd["you_have_it"])
+
+        # Ring: apply overrides first, then algorithm
+        ring = RING_OVERRIDES.get(name, assign_ring(category, sd["you_have_it"], sd["demand_count"]))
+
+        quadrant = get_quadrant(name)
+        movement = "new"  # All "new" on first generation
+
+        # Build rationale
+        parts = []
+        if sd["demand_count"] > 0:
+            parts.append(f"{sd['demand_count']} job appearance{'s' if sd['demand_count'] != 1 else ''}")
+        if sd["you_have_it"] == "YES":
+            parts.append("you have this skill")
+        elif sd["you_have_it"] == "LEARNING":
+            parts.append("actively learning")
+        if sd["platforms"]:
+            parts.append(f"seen on {', '.join(sorted(sd['platforms']))}")
+        rationale = ". ".join(parts) + "." if parts else "Baseline skill."
+
+        blips.append({
+            "name": name,
+            "quadrant": quadrant,
+            "ring": ring,
+            "category": category,
+            "transition_score": score,
+            "movement": movement,
+            "demand_count": sd["demand_count"],
+            "you_have_it": sd["you_have_it"],
+            "rationale": rationale,
+            "first_seen": sd["first_seen"] or today,
+            "last_seen": sd["last_seen"] or today,
+            "job_examples": sd["job_examples"],
+            "portfolio_link": None,
+            "updated": today,
+        })
+
+    # Sort by transition_score DESC (the most important skill comes first)
+    blips.sort(key=lambda b: (-b["transition_score"], b["name"]))
+
+    return blips
+
+
+# =============================================================================
+# SUMMARY OUTPUT
+# =============================================================================
+def print_summary(blips):
+    """Print transition radar summary to stdout."""
+    by_ring = defaultdict(list)
+    for b in blips:
+        by_ring[b["ring"]].append(b)
+
+    print(f"\n{'='*70}")
+    print(f"  TRANSITION RADAR -- {date.today().isoformat()}")
+    print(f"  {len(blips)} skills | Answering: 'Where should my 15 hrs/week go?'")
+    print(f"{'='*70}")
+
+    # Focus Board -- top 5 by transition score from Trial ring
+    trial_items = sorted(by_ring.get("Trial", []), key=lambda b: -b["transition_score"])
+    if trial_items:
+        print(f"\n  {'='*50}")
+        print(f"  FOCUS BOARD -- Your transition priorities")
+        print(f"  {'='*50}")
+        for i, b in enumerate(trial_items[:5], 1):
+            bar_len = int(b["transition_score"] / 2)
+            bar = "█" * bar_len
+            status = b["you_have_it"]
+            print(f"  {i}. {b['name']:30s} {bar:20s} {b['transition_score']:3d}  ({b['demand_count']} jobs, {status})")
+        print()
+
+    # Ring-by-ring (Trial first!)
+    for ring in ["Trial", "Adopt", "Assess", "Hold"]:
+        items = sorted(by_ring.get(ring, []), key=lambda b: -b["transition_score"])
+        print(f"  [{ring.upper()}] ({len(items)} skills)")
+        for b in items:
+            cat_short = b["category"][:7]
+            score_str = f"score:{b['transition_score']:2d}"
+            demand_str = f"demand:{b['demand_count']}" if b['demand_count'] > 0 else "baseline"
+            status = b["you_have_it"]
+            print(f"    {b['name']:40s} [{cat_short:7s}] {score_str}  {demand_str:12s} {status}")
+        print()
+
+    # Distribution
+    by_cat = defaultdict(int)
+    for b in blips:
+        by_cat[b["category"]] += 1
+    print(f"  Categories: {dict(by_cat)}")
+    print(f"  Rings: { {r: len(v) for r, v in by_ring.items()} }")
+    print()
+
+
+# =============================================================================
+# MAIN
+# =============================================================================
 if __name__ == "__main__":
-    main()
+    # Paths
+    default_input = Path(__file__).parent.parent.parent / "job-search" / "skills-demand.md"
+    default_output = Path(__file__).parent.parent / "radar.json"
+
+    input_path = Path(sys.argv[1]) if len(sys.argv) > 1 else default_input
+    output_path = Path(sys.argv[2]) if len(sys.argv) > 2 else default_output
+
+    if not input_path.exists():
+        print(f"ERROR: Input file not found: {input_path}")
+        sys.exit(1)
+
+    content = input_path.read_text()
+    blips = build_radar(content)
+
+    # Write JSON
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    output_path.write_text(json.dumps(blips, indent=2))
+    print(f"Wrote {len(blips)} blips to {output_path}")
+
+    # Print summary
+    print_summary(blips)
+
+    # History snapshot
+    history_dir = output_path.parent / "history"
+    history_dir.mkdir(exist_ok=True)
+    snapshot = history_dir / f"{date.today().isoformat()}.json"
+    snapshot.write_text(json.dumps(blips, indent=2))
+    print(f"History snapshot: {snapshot}")
+
+    # Embed data into index.html
+    index_path = output_path.parent / "index.html"
+    if index_path.exists():
+        html = index_path.read_text()
+        new_data = f"let RADAR_DATA = {json.dumps(blips)};"
+        html = re.sub(r'let RADAR_DATA = \[.*?\];', new_data, html, flags=re.DOTALL)
+        index_path.write_text(html)
+        print(f"Embedded {len(blips)} blips into {index_path}")
