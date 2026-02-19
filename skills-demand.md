@@ -3,9 +3,9 @@
 **Source of truth for demand counts in radar.json.**
 All numbers must come from actual job scan results. No fabrication.
 
-**Updated:** 2026-02-18
-**Scanner:** job-search-tracker (Brave Search, euremotejobs.com + remoteok.com)
-**Scan window:** Feb 2026 (first TASK-002 run)
+**Updated:** 2026-02-19
+**Scanner:** job-search-tracker (Brave Search, euremotejobs.com + remoteok.com) + targeted search (TASK-013)
+**Scan window:** Feb 2026 (TASK-002 run + TASK-013 verification scan)
 
 ---
 
@@ -49,8 +49,8 @@ All numbers must come from actual job scan results. No fabrication.
 | TypeScript | 1 | (Low relevance — AI agent tooling context) |
 | Kafka / Event Streaming | 1 | Streaming ML pipelines |
 | Spark | 1 | (Low relevance — data engineering, not ML eng) |
-| LangChain4j | 1 | Java LLM framework (TASK-013: verify with next scan) |
-| Spring AI | 1 | Java AI framework (TASK-013: verify with next scan) |
+| LangChain4j | 1 | Java LLM framework — bridge skill; demand verified TASK-013 (niche, EU remote: 1 mention) |
+| Spring AI | 1 | Java AI framework — bridge skill; demand verified TASK-013 (Indeed: ~8 global, EU remote: 1) |
 | C++ | 1 | Elastic role (hard gap) |
 | Go (Golang) | 1 | Xebia role (hard gap) |
 | React / Node.js | 1 | Full-stack (avoid) |
@@ -62,8 +62,6 @@ All numbers must come from actual job scan results. No fabrication.
 | FastAPI | 2 | Python web/API for ML serving |
 | CI/CD | 2 | DevOps component in MLOps JDs |
 | DevOps Practices | 1 | MLOps-adjacent |
-| LangChain4j | 1 | Java AI — needs next-scan verification |
-| Spring AI | 1 | Java AI — needs next-scan verification |
 | TensorFlow | 1 | Research-adjacent (not target) |
 | HubSpot API | 0 | CRM — not strategic |
 | EHR Systems | 0 | Healthcare — not target |
@@ -80,11 +78,10 @@ All numbers must come from actual job scan results. No fabrication.
 
 ---
 
-## TASK-013 — Pending Verification
+## TASK-013 — Verification Complete (2026-02-19)
 
-Spring AI and LangChain4j currently have demand=1 based on Springer book context, not scan data.
-Next scan should explicitly search:
-- `"Spring AI" site:euremotejobs.com`
-- `"LangChain4j" site:euremotejobs.com`
-
-Update demand counts after next run.
+Spring AI and LangChain4j demand=1 verified via targeted Brave Search scan:
+- Spring AI: Indeed shows ~8 global jobs; EU remote senior: 1 explicit mention (bridge category confirmed)
+- LangChain4j: Very niche in EU remote market; 1 mention (not to be confused with Python LangChain — 245 jobs)
+- Both remain at demand=1; both confirmed as bridge category (Java + AI intersection)
+- No ring changes required; radar.json is accurate
