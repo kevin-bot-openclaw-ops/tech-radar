@@ -207,6 +207,18 @@ This project demonstrates several production engineering patterns:
 
 ---
 
+## Screenshots
+
+### Full Radar View
+![Tech Radar Full View](screenshots/radar-full.png)
+
+### Filtered Quadrant View
+![Tech Radar Quadrant Filter](screenshots/radar-quadrant-filter.png)
+
+> **Note:** Screenshots require browser access. Pending addition via browser-enabled environment.
+
+---
+
 ## Current Snapshot (2026-02-19)
 
 - **55 technologies** tracked
