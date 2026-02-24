@@ -130,7 +130,8 @@ async function loadData() {
       fetch('descriptions.json').catch(() => ({ok:false}))
     ]);
     if (!radarRes.ok) throw new Error('Failed to load radar.json');
-    RADAR = await radarRes.json();
+    const radarData = await radarRes.json();
+    RADAR = {blips: radarData};
     if (descRes.ok) {
       const d = await descRes.json();
       DESCS = d.skills || {};
