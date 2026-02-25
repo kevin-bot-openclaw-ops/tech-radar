@@ -132,6 +132,8 @@ async function loadData() {
     if (!radarRes.ok) throw new Error('Failed to load radar.json');
     const radarData = await radarRes.json();
     RADAR = {blips: radarData};
+    // Normalize ring values to lowercase (radar.json has capitalized rings)
+    RADAR.blips.forEach(b => b.ring = b.ring.toLowerCase());
     if (descRes.ok) {
       const d = await descRes.json();
       DESCS = d.skills || {};
@@ -177,7 +179,7 @@ function renderFocusBoard(blips) {
           <div class="focus-bar" style="width:${pct}%"></div>
           <span class="focus-score">${b.transition_score}</span>
         </div>
-        <div class="focus-meta">${b.demand} job signal${b.demand!==1?'s':''} · ${metaText}</div>
+        <div class="focus-meta">${b.demand_count} job signal${b.demand_count!==1?'s':''} · ${metaText}</div>
       </div>
     </div>`;
   }).join('');
