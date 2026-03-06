@@ -1,5 +1,10 @@
 # AI/ML Transition Radar
 
+[![Live Demo](https://img.shields.io/badge/demo-live-success?style=flat-square)](https://kevin-bot-openclaw-ops.github.io/tech-radar/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg?style=flat-square)](LICENSE)
+[![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue?style=flat-square&logo=python&logoColor=white)](https://www.python.org)
+[![GitHub Pages](https://img.shields.io/badge/deploy-GitHub%20Pages-181717?style=flat-square&logo=github)](https://kevin-bot-openclaw-ops.github.io/tech-radar/)
+
 A data-driven, interactive technology radar that answers one question:
 
 > **"Where should I spend my 15 hours/week to land a €150k+ AI/ML engineering role?"**
@@ -7,6 +12,28 @@ A data-driven, interactive technology radar that answers one question:
 **[→ View the live radar](https://kevin-bot-openclaw-ops.github.io/tech-radar/)**
 
 This is not a ThoughtWorks-style organizational radar. It is a _transition radar_ — opinionated, personal, and built from real job market signal rather than team consensus.
+
+📊 **Current snapshot:** 55 technologies tracked • 6 high-priority learning targets • 8 job scans analyzed • Evidence-based scoring
+
+---
+
+## Table of Contents
+
+- [Why This Exists](#why-this-exists)
+- [Live Demo](#live-demo)
+- [Quick Start](#quick-start)
+- [How It Works](#how-it-works)
+  - [Step 1: Demand Logging](#step-1-demand-logging-skills-demandmd)
+  - [Step 2: Pipeline](#step-2-pipeline-generate-radarpy)
+  - [Step 3: Visualization](#step-3-visualization-indexhtml)
+- [Tech Stack](#tech-stack)
+- [Scoring Formula](#scoring-formula-worked-example)
+- [Repository Structure](#repository-structure)
+- [Running Locally](#running-locally)
+- [Interview Talking Points](#interview-talking-points)
+- [Screenshots](#screenshots)
+- [Current Snapshot](#current-snapshot-2026-02-19)
+- [Related Portfolio Projects](#related-portfolio-projects)
 
 ---
 
@@ -27,10 +54,39 @@ The result: a prioritized, continuously updated view of what to learn next.
 
 **→ [kevin-bot-openclaw-ops.github.io/tech-radar](https://kevin-bot-openclaw-ops.github.io/tech-radar/)**
 
-Features:
-- Filter by quadrant: Languages & Frameworks | Platforms | Techniques | Tools
-- Hover any blip for demand count, transition score, and example job titles
-- Ring legend explains priority tier (Trial > Adopt > Assess > Hold)
+**Features:**
+- 📊 **55 technologies tracked** across 4 quadrants (Languages, Platforms, Techniques, Tools)
+- 🎯 **6 high-priority targets** in Trial ring (next learning investments)
+- 🔍 **Interactive filtering** by quadrant with live hover tooltips
+- 📈 **Evidence-based scoring** from 8 real job scans (demand count + transition score)
+- 📅 **Historical snapshots** in `history/` to track skill movement over time
+- ⚡ **Zero dependencies** — pure D3.js visualization, Python stdlib pipeline
+
+---
+
+## Quick Start
+
+Want to see your own career transition radar?
+
+```bash
+# Clone the repo
+git clone https://github.com/kevin-bot-openclaw-ops/tech-radar.git
+cd tech-radar
+
+# Generate radar from the included demand log
+python3 scripts/generate-radar.py skills-demand.md radar.json
+
+# Open in browser
+python3 -m http.server 8080
+# Visit: http://localhost:8080
+```
+
+To update with your own job scan data:
+1. Add skills to the `## Demand Log` table in `skills-demand.md`
+2. Run `python3 scripts/generate-radar.py` to regenerate `radar.json`
+3. Refresh your browser to see the updated radar
+
+**No dependencies required** — uses Python stdlib only.
 
 ---
 
